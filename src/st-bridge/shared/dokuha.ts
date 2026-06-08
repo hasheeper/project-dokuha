@@ -1,19 +1,35 @@
 import {
   DEFAULT_DOKUHA_STATE,
+  DOKUHA_AFFECTION_TIER_LABELS,
+  DOKUHA_ATTACHMENT_LEVEL_LABELS,
+  DOKUHA_RELATIONSHIP_STAGE_LABELS,
   DOKUHA_STREAM_STATUS_LABELS,
   DOKUHA_STREAM_STATUSES,
+  deriveAffectionProfile,
   normalizeDokuhaState,
   normalizeStreamStatus,
+  type DokuhaAffectionProfile,
+  type DokuhaAffectionTier,
+  type DokuhaAttachmentLevel,
+  type DokuhaRelationshipStage,
   type DokuhaStreamStatus,
   type DokuhaState
 } from '../../dokuha/state';
 
 export {
   DEFAULT_DOKUHA_STATE,
+  DOKUHA_AFFECTION_TIER_LABELS,
+  DOKUHA_ATTACHMENT_LEVEL_LABELS,
+  DOKUHA_RELATIONSHIP_STAGE_LABELS,
   DOKUHA_STREAM_STATUS_LABELS,
   DOKUHA_STREAM_STATUSES,
+  deriveAffectionProfile,
   normalizeDokuhaState,
   normalizeStreamStatus,
+  type DokuhaAffectionProfile,
+  type DokuhaAffectionTier,
+  type DokuhaAttachmentLevel,
+  type DokuhaRelationshipStage,
   type DokuhaStreamStatus,
   type DokuhaState
 };

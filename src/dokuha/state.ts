@@ -1,11 +1,32 @@
 export const DOKUHA_STREAM_STATUSES = ['offline', 'online', 'brb', 'ending'] as const;
 export type DokuhaStreamStatus = (typeof DOKUHA_STREAM_STATUSES)[number];
+export type DokuhaAffectionTier = 'low' | 'mid' | 'high';
+export type DokuhaAttachmentLevel = 'non_attached' | 'light_attached' | 'heavy_attached';
+export type DokuhaRelationshipStage = 'neighbor' | 'friend' | 'lover';
 
 export const DOKUHA_STREAM_STATUS_LABELS: Record<DokuhaStreamStatus, string> = {
   offline: '离线',
   online: '直播中',
   brb: '暂离',
   ending: '收尾'
+};
+
+export const DOKUHA_AFFECTION_TIER_LABELS: Record<DokuhaAffectionTier, string> = {
+  low: '低熟悉',
+  mid: '中熟悉',
+  high: '高熟悉'
+};
+
+export const DOKUHA_ATTACHMENT_LEVEL_LABELS: Record<DokuhaAttachmentLevel, string> = {
+  non_attached: '非依恋',
+  light_attached: '轻度依恋',
+  heavy_attached: '重度依恋'
+};
+
+export const DOKUHA_RELATIONSHIP_STAGE_LABELS: Record<DokuhaRelationshipStage, string> = {
+  neighbor: '邻人',
+  friend: '朋友',
+  lover: '恋人'
 };
 
 export interface DokuhaState {
@@ -20,6 +41,13 @@ export interface DokuhaState {
   statusComment: string;
 }
 
+export interface DokuhaAffectionProfile {
+  affection: number;
+  affectionTier: DokuhaAffectionTier;
+  attachmentLevel: DokuhaAttachmentLevel;
+  relationshipStage: DokuhaRelationshipStage;
+}
+
 export const DEFAULT_DOKUHA_STATE: DokuhaState = {
   affection: 0,
   energy: 72,
@@ -31,6 +59,17 @@ export const DEFAULT_DOKUHA_STATE: DokuhaState = {
   handle: 'LOSTRAB_722',
   statusComment: '连接稳定，直播协议保持在线。'
 };
+
+export function deriveAffectionProfile(stateOrAffection: unknown): DokuhaAffectionProfile {
+  const source = isRecord(stateOrAffection) ? stateOrAffection.affection : stateOrAffection;
+  const affection = clampNumber(source, 0, 255, DEFAULT_DOKUHA_STATE.affection);
+  return {
+    affection,
+    affectionTier: affection >= 200 ? 'high' : affection >= 80 ? 'mid' : 'low',
+    attachmentLevel: affection >= 140 ? 'heavy_attached' : affection >= 60 ? 'light_attached' : 'non_attached',
+    relationshipStage: affection >= 120 ? 'lover' : affection >= 80 ? 'friend' : 'neighbor'
+  };
+}
 
 export function normalizeDokuhaState(value: unknown): DokuhaState {
   const source = isRecord(value) ? value : {};

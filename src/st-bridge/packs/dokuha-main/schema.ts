@@ -1,6 +1,7 @@
 import {
   DEFAULT_DOKUHA_STATE as SHARED_DEFAULT_DOKUHA_STATE,
   cloneJson,
+  deriveAffectionProfile as deriveSharedAffectionProfile,
   normalizeDokuhaState as normalizeSharedDokuhaState
 } from '../../shared/dokuha';
 
@@ -51,6 +52,10 @@ type RegisterMvuSchema = (schema: unknown) => void;
     return normalizeSharedDokuhaState(value);
   }
 
+  function deriveAffectionProfile(stateOrAffection) {
+    return deriveSharedAffectionProfile(stateOrAffection);
+  }
+
   function resolveZod() {
     return ROOT.z || ROOT.zod || ROOT.Zod || null;
   }
@@ -85,6 +90,7 @@ type RegisterMvuSchema = (schema: unknown) => void;
     DEFAULT_DOKUHA_STATE,
     makeDefaultDokuhaState,
     normalizeDokuhaState,
+    deriveAffectionProfile,
     DokuhaSchema: schemas?.dokuhaSchema || null,
     DOKUHAStatDataSchema: schemas?.statDataSchema || null
   };

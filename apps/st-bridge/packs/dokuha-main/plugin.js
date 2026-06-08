@@ -126,6 +126,18 @@
       await refreshStatus(options.reason || "patchState");
       return state;
     }
+    async function getAffectionProfile(options = {}) {
+      const state = await loadState(options);
+      const derive = ROOT.DOKUHASchemaRuntime?.deriveAffectionProfile;
+      if (typeof derive === "function") return derive(state);
+      const affection = Math.max(0, Math.min(255, Math.round(Number(state?.affection) || 0)));
+      return {
+        affection,
+        affectionTier: affection >= 200 ? "high" : affection >= 80 ? "mid" : "low",
+        attachmentLevel: affection >= 140 ? "heavy_attached" : affection >= 60 ? "light_attached" : "non_attached",
+        relationshipStage: affection >= 120 ? "lover" : affection >= 80 ? "friend" : "neighbor"
+      };
+    }
     async function refreshStatus(reason = "refresh") {
       if (disposed) return false;
       if (!statusHost) return false;
@@ -175,6 +187,12 @@
         });
         return { ok: true, state };
       },
+      async getAffectionProfile(payload) {
+        return {
+          ok: true,
+          profile: await getAffectionProfile(payload && typeof payload === "object" ? payload : {})
+        };
+      },
       async refreshStatus(payload) {
         return {
           ok: true,
@@ -223,6 +241,7 @@
       loadState,
       saveState,
       patchState,
+      getAffectionProfile,
       refreshStatus,
       openStatus() {
         return statusHost?.openStatus?.();

@@ -83,6 +83,17 @@
       }
       return "";
     }
+    function deriveAffectionProfile(state) {
+      const derive = ROOT.DOKUHASchemaRuntime?.deriveAffectionProfile || CURRENT_ROOT.DOKUHASchemaRuntime?.deriveAffectionProfile;
+      if (typeof derive === "function") return derive(state);
+      const affection = Math.max(0, Math.min(255, Math.round(Number(state?.affection) || 0)));
+      return {
+        affection,
+        affectionTier: affection >= 200 ? "high" : affection >= 80 ? "mid" : "low",
+        attachmentLevel: affection >= 140 ? "heavy_attached" : affection >= 60 ? "light_attached" : "non_attached",
+        relationshipStage: affection >= 120 ? "lover" : affection >= 80 ? "friend" : "neighbor"
+      };
+    }
     function appendQueryParams(url, params = {}) {
       const entries = Object.entries(params).filter(([, value]) => value !== void 0 && value !== null && value !== "");
       if (!entries.length || typeof url !== "string" || !url.trim()) return url;
@@ -675,7 +686,8 @@
             type: "DOKUHA_STATE_PUSH",
             reason: reason || "refresh",
             floorKey: "",
-            state: nextState
+            state: nextState,
+            affectionProfile: deriveAffectionProfile(nextState)
           }, "*");
           return true;
         } catch (_) {

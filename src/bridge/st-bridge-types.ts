@@ -13,6 +13,13 @@ export interface DokuhaSTBridgeState {
   loadedAt: string;
 }
 
+export interface DokuhaAffectionProfile {
+  affection: number;
+  affectionTier: 'low' | 'mid' | 'high';
+  attachmentLevel: 'non_attached' | 'light_attached' | 'heavy_attached';
+  relationshipStage: 'neighbor' | 'friend' | 'lover';
+}
+
 export interface DokuhaSTBridgeApi {
   version: string;
   state: DokuhaSTBridgeState;
@@ -69,6 +76,28 @@ declare global {
     DOKUHA_APP_BASE_URL?: string;
     DOKUHA_APP_URL?: string;
     DOKUHA_STATUS_URL?: string;
-    DOKUHAPlugin?: any;
+    DOKUHASchemaRuntime?: {
+      product: string;
+      DEFAULT_DOKUHA_STATE: unknown;
+      makeDefaultDokuhaState(): unknown;
+      normalizeDokuhaState(value?: unknown): unknown;
+      deriveAffectionProfile(stateOrAffection: unknown): DokuhaAffectionProfile;
+      DokuhaSchema?: unknown;
+      DOKUHAStatDataSchema?: unknown;
+    };
+    DOKUHAPlugin?: {
+      version: string;
+      bridge: DokuhaSTBridgeApi;
+      loadState(options?: Record<string, unknown>): Promise<unknown>;
+      saveState(nextState: unknown, options?: Record<string, unknown>): Promise<unknown>;
+      patchState(patcher: unknown, options?: Record<string, unknown>): Promise<unknown>;
+      getAffectionProfile(options?: Record<string, unknown>): Promise<DokuhaAffectionProfile>;
+      refreshStatus(reason?: string): Promise<boolean>;
+      openStatus(): unknown;
+      closeStatus(): unknown;
+      debugStatus(): unknown;
+      unload(): void;
+      openDashboardUrl: string;
+    };
   }
 }

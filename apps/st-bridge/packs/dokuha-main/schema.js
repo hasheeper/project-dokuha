@@ -10,6 +10,16 @@ const DEFAULT_DOKUHA_STATE = {
   handle: "LOSTRAB_722",
   statusComment: "连接稳定，直播协议保持在线。"
 };
+function deriveAffectionProfile(stateOrAffection) {
+  const source = isRecord(stateOrAffection) ? stateOrAffection.affection : stateOrAffection;
+  const affection = clampNumber(source, 0, 255, DEFAULT_DOKUHA_STATE.affection);
+  return {
+    affection,
+    affectionTier: affection >= 200 ? "high" : affection >= 80 ? "mid" : "low",
+    attachmentLevel: affection >= 140 ? "heavy_attached" : affection >= 60 ? "light_attached" : "non_attached",
+    relationshipStage: affection >= 120 ? "lover" : affection >= 80 ? "friend" : "neighbor"
+  };
+}
 function normalizeDokuhaState(value) {
   const source = isRecord(value) ? value : {};
   return {
@@ -80,6 +90,9 @@ function cloneJson(value, fallback) {
   function normalizeDokuhaState$1(value = {}) {
     return normalizeDokuhaState(value);
   }
+  function deriveAffectionProfile$1(stateOrAffection) {
+    return deriveAffectionProfile(stateOrAffection);
+  }
   function resolveZod() {
     return ROOT.z || ROOT.zod || ROOT.Zod || null;
   }
@@ -113,6 +126,7 @@ function cloneJson(value, fallback) {
     DEFAULT_DOKUHA_STATE: DEFAULT_DOKUHA_STATE$1,
     makeDefaultDokuhaState,
     normalizeDokuhaState: normalizeDokuhaState$1,
+    deriveAffectionProfile: deriveAffectionProfile$1,
     DokuhaSchema: schemas?.dokuhaSchema || null,
     DOKUHAStatDataSchema: schemas?.statDataSchema || null
   };

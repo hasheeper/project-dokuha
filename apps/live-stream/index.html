@@ -312,6 +312,9 @@
       margin-bottom: 16px;
       box-shadow: 0 12px 24px rgba(0,0,0,0.4);
     }
+    .hud-card.compact {
+      padding: 14px 16px;
+    }
     .hud-icon-box {
       width: 50px;
       height: 50px;
@@ -324,6 +327,15 @@
       box-shadow: inset 0 0 12px rgba(234, 69, 113, 0.2);
     }
     .hud-info { flex: 1; }
+    .hud-meta {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--accent-pink);
+      letter-spacing: 1px;
+      margin-top: 5px;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
     .hud-label {
       font-family: var(--font-mono);
       font-size: 10px;
@@ -371,6 +383,7 @@
       color: var(--text-gray);
       line-height: 1.5;
       letter-spacing: 2px;
+      white-space: pre-line;
     }
 
     /* ================= 底部绝对定位元素 ================= */
@@ -557,8 +570,8 @@
         </div>
         <div class="hud-info">
           <div class="hud-label">ENERGY</div>
-          <div class="hud-value">72%</div>
-          <div class="progress-track"><div class="progress-fill" style="width:72%"></div></div>
+          <div class="hud-value" data-dokuha-field="energy">72%</div>
+          <div class="progress-track"><div class="progress-fill" data-dokuha-bar="energy" style="width:72%"></div></div>
         </div>
       </div>
 
@@ -570,15 +583,28 @@
         </div>
         <div class="hud-info">
           <div class="hud-label">MOOD</div>
-          <div class="hud-value">68%</div>
-          <div class="progress-track"><div class="progress-fill" style="width:68%"></div></div>
+          <div class="hud-value" data-dokuha-field="mood">68%</div>
+          <div class="progress-track"><div class="progress-fill" data-dokuha-bar="mood" style="width:68%"></div></div>
+        </div>
+      </div>
+
+      <!-- HUD 好感度 -->
+      <div class="hud-card compact">
+        <div class="hud-icon-box">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.4-9.3-8.3C.8 9.5 2.1 5.3 5.7 4.5 7.8 4 10 5.1 12 7.4c2-2.3 4.2-3.4 6.3-2.9 3.6.8 4.9 5 3 8.2C19 16.6 12 21 12 21z"></path></svg>
+        </div>
+        <div class="hud-info">
+          <div class="hud-label">AFFECTION</div>
+          <div class="hud-value" data-dokuha-field="affection">0/255</div>
+          <div class="progress-track"><div class="progress-fill" data-dokuha-bar="affection" style="width:0%"></div></div>
+          <div class="hud-meta" data-dokuha-field="affection-profile">LOW / NEIGHBOR / NON_ATTACHED</div>
         </div>
       </div>
 
       <!-- 条形码区 -->
       <div class="barcode-area">
         <div class="barcode-img"></div>
-        <div class="barcode-text">
+        <div class="barcode-text" data-dokuha-field="identity">
           ID: LOSTRAB_722<br>LOCAL HOST
         </div>
         <div class="cross-mark" style="color:var(--text-dark); margin-top:10px; font-size:16px;">X</div>
@@ -587,8 +613,8 @@
 
     <!-- 左下硬核名字隔离板 -->
     <div class="bottom-nameplate">
-      <div class="bp-name">狐坂 毒羽 <span style="font-size:24px;color:var(--accent-pink)">X</span></div>
-      <div class="bp-sub">LOSTRAB_722 / LOCAL HOST</div>
+      <div class="bp-name"><span data-dokuha-field="hostName">狐坂 毒羽</span> <span style="font-size:24px;color:var(--accent-pink)">X</span></div>
+      <div class="bp-sub" data-dokuha-field="profileLine">LOSTRAB_722 / LOCAL HOST / NEIGHBOR</div>
     </div>
 
     <!-- 底部操作按钮列 -->
@@ -604,5 +630,80 @@
     </div>
 
   </div>
+  <script>
+    (function () {
+      'use strict';
+
+      const LABELS = {
+        affectionTier: { low: 'LOW', mid: 'MID', high: 'HIGH' },
+        attachmentLevel: { non_attached: 'NON_ATTACHED', light_attached: 'LIGHT_ATTACHED', heavy_attached: 'HEAVY_ATTACHED' },
+        relationshipStage: { neighbor: 'NEIGHBOR', friend: 'FRIEND', lover: 'LOVER' }
+      };
+
+      function clampNumber(value, min, max, fallback) {
+        const next = Number(value);
+        if (!Number.isFinite(next)) return fallback;
+        return Math.max(min, Math.min(max, Math.round(next)));
+      }
+
+      function deriveAffectionProfile(state) {
+        const affection = clampNumber(state && state.affection, 0, 255, 0);
+        return {
+          affection,
+          affectionTier: affection >= 200 ? 'high' : affection >= 80 ? 'mid' : 'low',
+          attachmentLevel: affection >= 140 ? 'heavy_attached' : affection >= 60 ? 'light_attached' : 'non_attached',
+          relationshipStage: affection >= 120 ? 'lover' : affection >= 80 ? 'friend' : 'neighbor'
+        };
+      }
+
+      function setText(name, value) {
+        document.querySelectorAll(`[data-dokuha-field="${name}"]`).forEach((node) => {
+          node.textContent = value;
+        });
+      }
+
+      function setBar(name, percent) {
+        document.querySelectorAll(`[data-dokuha-bar="${name}"]`).forEach((node) => {
+          node.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+        });
+      }
+
+      function applyState(state, profile) {
+        const nextState = state && typeof state === 'object' ? state : {};
+        const nextProfile = profile && typeof profile === 'object' ? profile : deriveAffectionProfile(nextState);
+        const energy = clampNumber(nextState.energy, 0, 100, 72);
+        const mood = clampNumber(nextState.mood, 0, 100, 68);
+        const affection = clampNumber(nextProfile.affection, 0, 255, 0);
+        const affectionPercent = Math.round((affection / 255) * 100);
+        const handle = typeof nextState.handle === 'string' && nextState.handle.trim() ? nextState.handle.trim() : 'LOSTRAB_722';
+        const location = typeof nextState.location === 'string' && nextState.location.trim() ? nextState.location.trim() : 'LOCAL HOST';
+        const hostName = typeof nextState.hostName === 'string' && nextState.hostName.trim() ? nextState.hostName.trim() : '狐坂 毒羽';
+        const tier = LABELS.affectionTier[nextProfile.affectionTier] || String(nextProfile.affectionTier || 'LOW').toUpperCase();
+        const relationship = LABELS.relationshipStage[nextProfile.relationshipStage] || String(nextProfile.relationshipStage || 'NEIGHBOR').toUpperCase();
+        const attachment = LABELS.attachmentLevel[nextProfile.attachmentLevel] || String(nextProfile.attachmentLevel || 'NON_ATTACHED').toUpperCase();
+
+        setText('energy', `${energy}%`);
+        setBar('energy', energy);
+        setText('mood', `${mood}%`);
+        setBar('mood', mood);
+        setText('affection', `${affection}/255`);
+        setBar('affection', affectionPercent);
+        setText('affection-profile', `${tier} / ${relationship} / ${attachment}`);
+        setText('identity', `ID: ${handle}\n${location}`);
+        setText('hostName', hostName);
+        setText('profileLine', `${handle} / ${location} / ${relationship}`);
+      }
+
+      window.addEventListener('message', (event) => {
+        const data = event && event.data;
+        if (!data || data.type !== 'DOKUHA_STATE_PUSH') return;
+        applyState(data.state, data.affectionProfile);
+      });
+
+      try {
+        window.parent?.postMessage?.({ type: 'DOKUHA_STATUS_READY', appId: 'live-stream', reason: 'ready' }, '*');
+      } catch (_) {}
+    })();
+  </script>
 </body>
 </html>

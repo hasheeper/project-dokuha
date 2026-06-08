@@ -1,4 +1,4 @@
-import type { DokuhaSTBridgeApi } from '../bridge/st-bridge-types';
+import type { DokuhaAffectionProfile, DokuhaSTBridgeApi } from '../bridge/st-bridge-types';
 
 declare global {
   const unsafeWindow: any;
@@ -12,7 +12,15 @@ declare global {
     DOKUHA_ST_UI_ROOT?: any;
     DOKUHA_ST_API_ROOT?: any;
     DOKUHAMainRuntime?: any;
-    DOKUHASchemaRuntime?: any;
+    DOKUHASchemaRuntime?: {
+      product: string;
+      DEFAULT_DOKUHA_STATE: unknown;
+      makeDefaultDokuhaState(): unknown;
+      normalizeDokuhaState(value?: unknown): unknown;
+      deriveAffectionProfile(stateOrAffection: unknown): DokuhaAffectionProfile;
+      DokuhaSchema?: unknown;
+      DOKUHAStatDataSchema?: unknown;
+    };
     DOKUHAPlugin?: any;
     ST_BRIDGE_PACK?: string;
     ST_BRIDGE_URL?: string;
