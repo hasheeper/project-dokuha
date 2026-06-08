@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false
+  },
+  "include": ["**/*.ts", "**/*.d.ts", "../bridge/st-bridge-types.ts", "../dokuha/state.ts"],
+  "exclude": []
+}

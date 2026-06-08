@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build",
+    "build:tools": "rm -rf .generated/tools && tsc -p tsconfig.tools.json",
+    "build:st-bridge": "npm run build:tools && node .generated/tools/scripts/build-st-bridge.js",
+    "copy-static": "npm run build:tools && node .generated/tools/scripts/copy-static.js",
+    "build": "npm run build:st-bridge && vite build && node .generated/tools/scripts/copy-static.js",
     "preview": "vite preview --host 127.0.0.1",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit && tsc -p tsconfig.st-bridge.json && tsc -p tsconfig.tools.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",

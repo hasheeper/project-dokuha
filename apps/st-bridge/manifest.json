@@ -1,0 +1,43 @@
+{
+  "version": "0.1.0",
+  "defaultPack": "dokuha-main",
+  "activePack": "dokuha-main",
+  "packs": {
+    "dokuha-main": {
+      "label": "DOKUHA Main",
+      "product": "project-dokuha",
+      "globals": {
+        "DOKUHA_APP_BASE_URL": "https://hasheeper.github.io/project-dokuha",
+        "DOKUHA_APP_URL": "https://hasheeper.github.io/project-dokuha/index.html?app=live-stream",
+        "DOKUHA_STATUS_URL": "https://hasheeper.github.io/project-dokuha/apps/live-stream/index.html"
+      },
+      "scripts": [
+        {
+          "id": "dokuha-schema",
+          "type": "module",
+          "url": "./packs/dokuha-main/schema.js"
+        },
+        {
+          "id": "dokuha-state-replay",
+          "type": "script",
+          "url": "./packs/dokuha-main/state-replay.js"
+        },
+        {
+          "id": "dokuha-prompt-injection",
+          "type": "script",
+          "url": "./packs/dokuha-main/prompt-injection.js"
+        },
+        {
+          "id": "dokuha-status-host",
+          "type": "script",
+          "url": "./packs/dokuha-main/status-host.js"
+        },
+        {
+          "id": "dokuha-main-pack",
+          "type": "script",
+          "url": "./packs/dokuha-main/plugin.js"
+        }
+      ]
+    }
+  }
+}
