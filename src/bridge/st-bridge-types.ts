@@ -5,6 +5,10 @@ export interface DokuhaSTBridgeState {
   packId: string;
   product: string;
   label: string;
+  env: 'local' | 'prod';
+  appBaseUrl: string;
+  appUrl: string;
+  statusUrl: string;
   loaded: Array<{ id?: string; type?: string; url: string }>;
   loadedAt: string;
 }
@@ -30,6 +34,16 @@ export interface DokuhaSTBridgeApi {
     patch(namespace: string, patcher: (draft: any, current: unknown) => unknown | Promise<unknown>, options?: { type?: string; rootKey?: string }): Promise<unknown>;
     migrate(namespace?: string, legacyVars?: unknown, options?: { type?: string; rootKey?: string }): Promise<unknown>;
   };
+  host?: Record<string, unknown>;
+  utils?: {
+    resolveUrl(path: string, base?: string): string;
+    withCache(url: string): string;
+    bridgeRoot: string;
+    env: 'local' | 'prod';
+    appBaseUrl: string;
+    appUrl: string;
+    statusUrl: string;
+  };
   registerActions(namespace: string, handlers: Record<string, (payload?: unknown) => unknown | Promise<unknown>>): void;
   dispatch(namespace: string, action: string, payload?: unknown): Promise<unknown>;
   reload(): Promise<unknown>;
@@ -50,6 +64,11 @@ declare global {
     ST_BRIDGE_PACK?: string;
     ST_BRIDGE_URL?: string;
     ST_BRIDGE_MANIFEST_URL?: string;
+    ST_BRIDGE_ENV?: 'local' | 'prod';
+    ST_BRIDGE_CACHE_BUST?: string;
+    DOKUHA_APP_BASE_URL?: string;
+    DOKUHA_APP_URL?: string;
+    DOKUHA_STATUS_URL?: string;
     DOKUHAPlugin?: any;
   }
 }

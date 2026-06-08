@@ -10,6 +10,8 @@
     "copy-static": "npm run build:tools && node .generated/tools/scripts/copy-static.js",
     "build": "npm run build:st-bridge && vite build && node .generated/tools/scripts/copy-static.js",
     "preview": "vite preview --host 127.0.0.1",
+    "serve:local": "node apps/st-bridge/scripts/serve-local.mjs --port 4173 --root .",
+    "st:local": "npm run serve:local",
     "check": "tsc --noEmit && tsc -p tsconfig.st-bridge.json && tsc -p tsconfig.tools.json --noEmit"
   },
   "devDependencies": {

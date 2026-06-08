@@ -17,6 +17,11 @@ declare global {
     ST_BRIDGE_PACK?: string;
     ST_BRIDGE_URL?: string;
     ST_BRIDGE_MANIFEST_URL?: string;
+    ST_BRIDGE_ENV?: 'local' | 'prod';
+    ST_BRIDGE_CACHE_BUST?: string;
+    DOKUHA_APP_BASE_URL?: string;
+    DOKUHA_APP_URL?: string;
+    DOKUHA_STATUS_URL?: string;
   }
 }
 

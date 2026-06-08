@@ -53,6 +53,10 @@
     const BRIDGE_NAME = "[DOKUHA ST Bridge]";
     const VERSION = "0.1.0";
     const DEFAULT_MANIFEST = "./manifest.json";
+    const PROD_APP_BASE_URL = "https://hasheeper.github.io/project-dokuha";
+    const LOCAL_APP_BASE_URL = "http://127.0.0.1:4173";
+    const APP_ROUTE = "index.html?app=live-stream";
+    const STATUS_PATH = "apps/live-stream/index.html";
     const FALLBACK_BRIDGE_URL = "https://hasheeper.github.io/project-dokuha/apps/st-bridge/bridge.js";
     function pushWindowCandidate(candidates, value) {
       try {
@@ -220,6 +224,22 @@
     function normalizeString2(value, fallback = "") {
       return typeof value === "string" && value.trim() ? value.trim() : fallback;
     }
+    function trimTrailingSlash(value) {
+      return typeof value === "string" ? value.trim().replace(/\/+$/, "") : "";
+    }
+    function isLocalBridgeUrl(url) {
+      try {
+        const hostname = String(url.hostname || "").toLowerCase();
+        return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" || hostname === "::1";
+      } catch (_) {
+        return false;
+      }
+    }
+    function normalizeEnv(value, fallback = "prod") {
+      const normalized = normalizeString2(value, "").toLowerCase();
+      if (normalized === "local" || normalized === "prod") return normalized;
+      return fallback;
+    }
     function isUsableBridgeUrl(value) {
       if (!value || typeof value !== "string") return false;
       if (!/^https?:\/\//i.test(value)) return false;
@@ -252,12 +272,33 @@
     const bridgeUrl = new URL(getCurrentScriptUrl());
     const bridgeRoot = new URL(".", bridgeUrl);
     const params = bridgeUrl.searchParams;
-    const buildCacheKey = "847a81bebf1e";
+    const buildCacheKey = "af34cb6f8707";
     const cacheBust = params.get("v") || params.get("cache") || normalizeString2(getGlobalValue("ST_BRIDGE_CACHE_BUST")) || buildCacheKey;
     const forceReload = params.get("force") === "1";
+    function resolveBridgeProfile() {
+      const env = normalizeEnv(
+        params.get("env") || getGlobalValue("ST_BRIDGE_ENV"),
+        isLocalBridgeUrl(bridgeUrl) ? "local" : "prod"
+      );
+      const fallbackAppBaseUrl = env === "local" ? LOCAL_APP_BASE_URL : PROD_APP_BASE_URL;
+      const appBaseUrl = trimTrailingSlash(
+        params.get("appBase") || getGlobalValue("DOKUHA_APP_BASE_URL") || fallbackAppBaseUrl
+      ) || fallbackAppBaseUrl;
+      return {
+        env,
+        appBaseUrl,
+        appUrl: `${appBaseUrl}/${APP_ROUTE}`,
+        statusUrl: `${appBaseUrl}/${STATUS_PATH}`
+      };
+    }
+    const bridgeProfile = resolveBridgeProfile();
     publishHostInfo({
       bridgeUrl: bridgeUrl.href,
       bridgeRoot: bridgeRoot.href,
+      env: bridgeProfile.env,
+      appBaseUrl: bridgeProfile.appBaseUrl,
+      appUrl: bridgeProfile.appUrl,
+      statusUrl: bridgeProfile.statusUrl,
       cacheBust,
       forceReload
     });
@@ -292,7 +333,7 @@
       }
       return { id: requested, pack };
     }
-    function applyGlobals(pack, packId) {
+    function applyGlobals(pack, packId, profile = bridgeProfile) {
       getBridgeTargets().forEach((target) => {
         try {
           target.ST_BRIDGE_PACK = packId;
@@ -302,6 +343,10 @@
               target[key] = value;
             });
           }
+          target.ST_BRIDGE_ENV = profile.env;
+          target.DOKUHA_APP_BASE_URL = profile.appBaseUrl;
+          target.DOKUHA_APP_URL = profile.appUrl;
+          target.DOKUHA_STATUS_URL = profile.statusUrl;
         } catch (_) {
         }
       });
@@ -431,6 +476,10 @@
         host: publishHostInfo({
           bridgeUrl: bridgeUrl.href,
           bridgeRoot: bridgeRoot.href,
+          env: bridgeProfile.env,
+          appBaseUrl: bridgeProfile.appBaseUrl,
+          appUrl: bridgeProfile.appUrl,
+          statusUrl: bridgeProfile.statusUrl,
           cacheBust,
           forceReload
         }),
@@ -446,7 +495,15 @@
           patch: patchNamespace,
           migrate: migrateNamespace
         },
-        utils: { resolveUrl, withCache, bridgeRoot: bridgeRoot.href },
+        utils: {
+          resolveUrl,
+          withCache,
+          bridgeRoot: bridgeRoot.href,
+          env: state?.env || bridgeProfile.env,
+          appBaseUrl: state?.appBaseUrl || bridgeProfile.appBaseUrl,
+          appUrl: state?.appUrl || bridgeProfile.appUrl,
+          statusUrl: state?.statusUrl || bridgeProfile.statusUrl
+        },
         registerActions(namespace, handlers) {
           if (!namespace || !isObject(handlers)) return;
           actionHandlers[namespace] = { ...actionHandlers[namespace] || {}, ...handlers };
@@ -508,7 +565,13 @@
       const manifest = await fetchJson(manifestUrl);
       const { id: packId, pack } = selectPack(manifest);
       const registry = getLoadedRegistry();
-      const registryKey = `${manifestUrl}::${packId}::${cacheBust}`;
+      const registryKey = [
+        manifestUrl,
+        packId,
+        bridgeProfile.env,
+        bridgeProfile.appBaseUrl,
+        cacheBust
+      ].join("::");
       if (registry[registryKey] && !forceReload) {
         exposeApi(registry[registryKey]);
         return registry[registryKey];
@@ -519,7 +582,7 @@
         makeDefaultState: makeDefaultDokuhaState,
         normalize: normalizeDokuhaState$1
       });
-      applyGlobals(pack, packId);
+      applyGlobals(pack, packId, bridgeProfile);
       const state = {
         bridgeVersion: VERSION,
         manifestUrl,
@@ -527,6 +590,10 @@
         packId,
         product: pack.product || packId,
         label: pack.label || packId,
+        env: bridgeProfile.env,
+        appBaseUrl: bridgeProfile.appBaseUrl,
+        appUrl: bridgeProfile.appUrl,
+        statusUrl: bridgeProfile.statusUrl,
         loaded: [],
         loadedAt: (/* @__PURE__ */ new Date()).toISOString()
       };
