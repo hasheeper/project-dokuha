@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "defaultApp": "live-stream",
+  "apps": {
+    "live-stream": {
+      "id": "live-stream",
+      "name": "DOKUHA Live Stream UI",
+      "type": "dashboard",
+      "container": "./index.html?app=live-stream",
+      "entry": "./apps/live-stream/index.html",
+      "status": "active",
+      "notes": "Standalone live stream interface hosted inside the DOKUHA app shell."
+    }
+  }
+}

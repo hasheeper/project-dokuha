@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DOKUHA LIVE STREAM UI</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Noto+Sans+SC:wght@500;700;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
+
+    :root {
+      /* 核心赛博电竞色板 (精准提取自参考图) */
+      --bg-dark: #121014;       /* 背景极暗灰 */
+      --panel-dark: #16151a;    /* 面板深灰 */
+      --panel-light: #1c1a21;   /* 稍亮的面板色 */
+      --accent-pink: #ea4571;   /* 主题高光哑光粉 */
+      --accent-dim: #5c1e30;    /* 进度条底色 */
+      
+      --text-white: #ffffff;
+      --text-gray: #a6a3b0;
+      --text-dark: #4a4754;
+      
+      --border-color: #2b2831;
+      
+      --font-eng: 'Oswald', sans-serif;
+      --font-chs: 'Noto Sans SC', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+    body {
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: var(--font-chs);
+      color: var(--text-white);
+      /* 提供一点外围间距 */
+      padding: 20px; 
+    }
+
+    /* ================= 核心外层主容器 ================= */
+    .dashboard-container {
+      position: relative;
+      width: 100%;
+      max-width: 1400px;
+      height: 850px;
+      background-color: var(--bg-dark);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
+      display: grid;
+      grid-template-columns: 320px 1fr 280px;
+      padding: 30px 40px;
+      isolation: isolate;
+    }
+
+    /* 细微的背景网格点与装饰十字线 */
+    .dashboard-container::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: 
+        radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+      background-size: 20px 20px;
+      z-index: -2;
+      pointer-events: none;
+    }
+
+    /* 背景巨大水印文字 DOKUHA */
+    .bg-watermark {
+      position: absolute;
+      top: 15%;
+      left: 30%;
+      font-family: var(--font-eng);
+      font-size: 320px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.02);
+      line-height: 1;
+      pointer-events: none;
+      z-index: -1;
+      letter-spacing: -5px;
+    }
+
+    /* ================= 顶部全局导航列 ================= */
+    .top-nav {
+      position: absolute;
+      top: 30px; left: 40px; right: 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+    }
+    .nav-left { display: flex; align-items: center; gap: 10px; color: var(--text-gray); }
+    .nav-left .dot { width: 8px; height: 8px; background: var(--accent-pink); border-radius: 50%; }
+    .nav-right { display: flex; align-items: center; gap: 10px; color: var(--text-gray); }
+    .nav-right .secure { color: var(--accent-pink); }
+    
+    /* 十字标 */
+    .cross-mark { color: var(--text-dark); flex-shrink: 0; }
+
+    /* ================= 左侧栏 (标题 / 聊天 / 音乐) ================= */
+    .col-left {
+      display: flex;
+      flex-direction: column;
+      margin-top: 40px;
+      z-index: 10;
+    }
+
+    /* 大标题区 */
+    .title-block { margin-bottom: 30px; }
+    .title-live {
+      font-family: var(--font-eng);
+      font-size: 80px;
+      line-height: 1;
+      font-weight: 700;
+      color: var(--text-white);
+      position: relative;
+      padding-left: 16px;
+      margin-bottom: -5px;
+    }
+    .title-live::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 15px; bottom: 10px;
+      width: 6px;
+      background: var(--accent-pink);
+    }
+    .title-streaming {
+      font-family: var(--font-mono);
+      font-size: 18px;
+      color: var(--accent-pink);
+      letter-spacing: 12px;
+      margin-left: 16px;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
+    .title-sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-gray);
+      letter-spacing: 3px;
+    }
+
+    /* 直播状态点 */
+    .on-air {
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .on-air-tag {
+      font-family: var(--font-eng);
+      font-size: 16px;
+      color: var(--accent-pink);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: 2px;
+    }
+    .status-online {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-gray);
+      letter-spacing: 1.5px;
+    }
+
+    /* 聊天面板 */
+    .chat-box {
+      width: 100%;
+      background: var(--panel-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      margin-bottom: 24px;
+    }
+    .chat-header {
+      font-family: var(--font-eng);
+      font-size: 14px;
+      color: var(--text-white);
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .chat-msg {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .chat-avatar {
+      width: 28px; height: 28px;
+      background: #ccc;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background-image: radial-gradient(circle at top left, #eee, #888);
+    }
+    .chat-content { flex: 1; }
+    .chat-name {
+      font-size: 11px;
+      color: var(--text-gray);
+      margin-bottom: 2px;
+    }
+    .chat-text {
+      font-size: 12px;
+      color: #dfdfdf;
+      font-weight: 500;
+    }
+    .chat-msg:last-child {
+      opacity: 0.5; /* 底部渐隐感 */
+    }
+    .chat-icon-pink {
+      color: var(--accent-pink);
+    }
+
+    /* 音乐播放器面板 */
+    .music-box {
+      width: 100%;
+      background: var(--panel-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+    .music-header {
+      font-family: var(--font-eng);
+      font-size: 12px;
+      color: var(--text-white);
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    .music-waves {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--accent-pink);
+      margin-bottom: 12px;
+      height: 24px;
+    }
+    .wave-bars {
+      flex: 1;
+      height: 100%;
+      background: repeating-linear-gradient(90deg, var(--accent-pink) 0, var(--accent-pink) 2px, transparent 2px, transparent 6px);
+      clip-path: polygon(0 40%, 10% 20%, 20% 60%, 30% 0, 40% 100%, 50% 30%, 60% 80%, 70% 20%, 80% 90%, 90% 40%, 100% 60%, 100% 100%, 0 100%);
+    }
+    .music-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-gray);
+    }
+
+    /* ================= 中央立绘区 ================= */
+    .col-center {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end; /* 立绘靠底 */
+      z-index: 5;
+    }
+    
+    .character-art {
+      width: 130%; /* 允许人物足够大 */
+      max-height: 110%; /* 突破顶部限制一点点 */
+      object-fit: contain;
+      object-position: bottom center;
+      filter: drop-shadow(0 20px 40px rgba(0,0,0,0.8));
+    }
+
+    /* ================= 右侧栏 (HUD状态 / ID / Follow) ================= */
+    .col-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      margin-top: 140px;
+      z-index: 10;
+    }
+
+    /* 右上点阵装饰 */
+    .decor-dots {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 30px;
+      align-items: flex-end;
+      padding-right: 15px;
+    }
+    .decor-dots span {
+      width: 4px; height: 4px;
+      background: var(--text-dark);
+      border-radius: 50%;
+    }
+
+    /* 状态卡片 (Energy & Mood) */
+    .hud-card {
+      width: 100%;
+      background: var(--panel-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.4);
+    }
+    .hud-icon-box {
+      width: 50px;
+      height: 50px;
+      border: 2px solid var(--accent-pink);
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: var(--accent-pink);
+      box-shadow: inset 0 0 12px rgba(234, 69, 113, 0.2);
+    }
+    .hud-info { flex: 1; }
+    .hud-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-gray);
+      letter-spacing: 1px;
+    }
+    .hud-value {
+      font-family: var(--font-eng);
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-white);
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+    .progress-track {
+      width: 100%;
+      height: 6px;
+      background: var(--accent-dim);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent-pink);
+      border-radius: 3px;
+    }
+
+    /* 右侧条形码区域 */
+    .barcode-area {
+      margin-top: 30px;
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    .barcode-img {
+      width: 90px;
+      height: 20px;
+      background: repeating-linear-gradient(90deg, var(--text-gray) 0, var(--text-gray) 2px, transparent 2px, transparent 4px, var(--text-gray) 4px, var(--text-gray) 5px, transparent 5px, transparent 8px);
+    }
+    .barcode-text {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-gray);
+      line-height: 1.5;
+      letter-spacing: 2px;
+    }
+
+    /* ================= 底部绝对定位元素 ================= */
+    
+    /* 底部巨幅名字标 */
+    .bottom-nameplate {
+      position: absolute;
+      bottom: -1px; /* 紧贴底边 */
+      left: -1px;   /* 紧贴左边 */
+      background: var(--bg-dark);
+      border-top: 1px solid var(--border-color);
+      border-right: 1px solid var(--border-color);
+      border-top-right-radius: 12px;
+      padding: 24px 40px;
+      z-index: 20;
+    }
+    .bp-name {
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: 8px;
+      color: var(--text-white);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 4px;
+    }
+    .bp-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-pink);
+      letter-spacing: 2px;
+      font-weight: 700;
+    }
+
+    /* 底部居中操作图标 */
+    .bottom-actions {
+      position: absolute;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 24px;
+      color: var(--text-gray);
+      z-index: 20;
+    }
+    .bottom-actions svg {
+      width: 20px; height: 20px; cursor: pointer;
+      transition: color 0.2s;
+    }
+    .bottom-actions svg:hover { color: var(--accent-pink); }
+
+    /* 右下角关注模块 (斜切角特色) */
+    .bottom-follow {
+      position: absolute;
+      bottom: -1px;
+      right: -1px;
+      background: var(--accent-pink);
+      padding: 16px 40px 16px 60px;
+      border-top-left-radius: 4px; 
+      /* CSS 切角技巧 */
+      clip-path: polygon(30px 0, 100% 0, 100% 100%, 0 100%);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-white);
+      letter-spacing: 3px;
+      z-index: 20;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 主面板 -->
+  <div class="dashboard-container">
+    
+    <!-- 背景大水印 -->
+    <div class="bg-watermark">DOKUHA</div>
+
+    <!-- 顶部全局导航 -->
+    <div class="top-nav">
+      <div class="nav-left">
+        <div class="dot"></div>
+        <span>LIVE STREAM</span>
+        <span class="cross-mark">X</span>
+      </div>
+      <div class="nav-right">
+        <span>CONNECTION</span>
+        <span class="secure">SECURE</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-pink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      </div>
+    </div>
+
+    <!-- 左侧内容柱 -->
+    <div class="col-left">
+      <div class="title-block">
+        <div class="title-live">LIVE</div>
+        <div class="title-streaming">STREAMING</div>
+        <div class="title-sub">/// DOKUHA PROTOCOL &nbsp;&nbsp;&nbsp;X</div>
+      </div>
+
+      <div class="on-air">
+        <div class="on-air-tag">
+          <div class="dot" style="width:10px;height:10px;background:var(--accent-pink);border-radius:50%;"></div>
+          ON AIR
+        </div>
+        <div class="status-online">STATUS: ONLINE <span class="cross-mark" style="margin-left:8px">x</span></div>
+      </div>
+
+      <!-- 聊天框面板 -->
+      <div class="chat-box">
+        <div class="chat-header">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent-pink)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          LIVE CHAT
+        </div>
+        
+        <div class="chat-msg">
+          <div class="chat-avatar"></div>
+          <div class="chat-content">
+            <div class="chat-name">夜行者_77</div>
+            <div class="chat-text">狐狸小姐今天也超酷！</div>
+          </div>
+          <svg class="chat-icon-pink" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+        </div>
+
+        <div class="chat-msg">
+          <div class="chat-avatar" style="background:#555"></div>
+          <div class="chat-content">
+            <div class="chat-name">黑白猫</div>
+            <div class="chat-text">这套穿搭好戳我~</div>
+          </div>
+        </div>
+
+        <div class="chat-msg">
+          <div class="chat-avatar" style="background:#888"></div>
+          <div class="chat-content">
+            <div class="chat-name">Echo_404</div>
+            <div class="chat-text">声音也太好听了吧!!</div>
+          </div>
+        </div>
+
+        <div class="chat-msg">
+          <div class="chat-avatar" style="border:1px solid var(--accent-pink)"></div>
+          <div class="chat-content">
+            <div class="chat-name" style="color:var(--accent-pink)">Lostrab</div>
+            <div class="chat-text">已关注，从今天开始支持~</div>
+          </div>
+        </div>
+        
+        <!-- 截断号 -->
+        <div style="text-align:center; color:var(--accent-pink); font-size:16px; letter-spacing:4px">...</div>
+      </div>
+
+      <!-- 音乐播放面板 -->
+      <div class="music-box">
+        <div class="music-header">
+          <span style="color:var(--accent-pink)">♪</span> NOW PLAYING
+        </div>
+        <div class="music-waves">
+          <span>♛</span>
+          <div class="wave-bars"></div>
+          <div class="wave-bars" style="clip-path: polygon(0 80%, 20% 20%, 40% 90%, 60% 30%, 80% 100%, 100% 40%, 100% 100%, 0 100%);"></div>
+        </div>
+        <div class="music-title">Night Drive / 88%</div>
+      </div>
+    </div>
+
+    <!-- 中央立绘层 -->
+    <div class="col-center">
+      <img class="character-art" src="https://i.ibb.co/RGgdW2R1/dkh-work-1.png" alt="Kosaka Dokuha">
+    </div>
+
+    <!-- 右侧内容柱 -->
+    <div class="col-right">
+      <div class="decor-dots">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+
+      <!-- HUD 能量条 -->
+      <div class="hud-card">
+        <div class="hud-icon-box">
+          <!-- 闪电 Icon -->
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        </div>
+        <div class="hud-info">
+          <div class="hud-label">ENERGY</div>
+          <div class="hud-value">72%</div>
+          <div class="progress-track"><div class="progress-fill" style="width:72%"></div></div>
+        </div>
+      </div>
+
+      <!-- HUD 心情条 -->
+      <div class="hud-card">
+        <div class="hud-icon-box">
+          <!-- 爱心 Icon -->
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+        </div>
+        <div class="hud-info">
+          <div class="hud-label">MOOD</div>
+          <div class="hud-value">68%</div>
+          <div class="progress-track"><div class="progress-fill" style="width:68%"></div></div>
+        </div>
+      </div>
+
+      <!-- 条形码区 -->
+      <div class="barcode-area">
+        <div class="barcode-img"></div>
+        <div class="barcode-text">
+          ID: LOSTRAB_722<br>LOCAL HOST
+        </div>
+        <div class="cross-mark" style="color:var(--text-dark); margin-top:10px; font-size:16px;">X</div>
+      </div>
+    </div>
+
+    <!-- 左下硬核名字隔离板 -->
+    <div class="bottom-nameplate">
+      <div class="bp-name">狐坂 毒羽 <span style="font-size:24px;color:var(--accent-pink)">X</span></div>
+      <div class="bp-sub">LOSTRAB_722 / LOCAL HOST</div>
+    </div>
+
+    <!-- 底部操作按钮列 -->
+    <div class="bottom-actions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+    </div>
+
+    <!-- 右下角斜切角按钮 -->
+    <div class="bottom-follow">
+      /// FOLLOW ME //
+    </div>
+
+  </div>
+</body>
+</html>
