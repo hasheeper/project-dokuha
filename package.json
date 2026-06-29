@@ -15,6 +15,7 @@
     "host:local": "npm run serve:local",
     "serve:local": "node apps/st-bridge/scripts/serve-local.mjs --port 4173 --root .",
     "st:local": "npm run serve:local",
+    "check:expression-fallback": "npm run build:regex && node .generated/tools/scripts/check-dokuha-expression-fallback.js",
     "check": "tsc --noEmit && tsc -p tsconfig.st-bridge.json && tsc -p tsconfig.tools.json --noEmit"
   },
   "devDependencies": {
