@@ -33,6 +33,11 @@
           "url": "./packs/dokuha-main/status-host.js"
         },
         {
+          "id": "dokuha-asset-cache",
+          "type": "script",
+          "url": "./packs/dokuha-main/asset-cache.js"
+        },
+        {
           "id": "dokuha-main-pack",
           "type": "script",
           "url": "./packs/dokuha-main/plugin.js"

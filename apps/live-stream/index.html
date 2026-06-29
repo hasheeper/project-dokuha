@@ -2,25 +2,26 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>DOKUHA LIVE STREAM UI</title>
+  <script src="./vendor/pixi.min.js"></script>
+  <script src="./vendor/pixi-spine-3.8.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Noto+Sans+SC:wght@500;700;900&family=JetBrains+Mono:wght@500;700;800&display=swap');
 
     :root {
-      /* 核心赛博电竞色板 (精准提取自参考图) */
-      --bg-dark: #121014;       /* 背景极暗灰 */
-      --panel-dark: #16151a;    /* 面板深灰 */
-      --panel-light: #1c1a21;   /* 稍亮的面板色 */
-      --accent-pink: #ea4571;   /* 主题高光哑光粉 */
-      --accent-dim: #5c1e30;    /* 进度条底色 */
-      
-      --text-white: #ffffff;
-      --text-gray: #a6a3b0;
-      --text-dark: #4a4754;
-      
-      --border-color: #2b2831;
-      
+      /* 核心配色：深沉的冷色调黑与高饱和玫红 */
+      --bg-dark: #120e14;
+      --panel-dark: #161219;
+      --accent-pink: #df4576;
+      --accent-dim: #6b223a;
+
+      --text-white: #f8f6f7;
+      --text-gray: #7a7382;
+      --text-dim: #4d4651;
+      --border-color: #2b252f;
+      --glass-bg: rgba(22, 17, 24, 0.75);
+
       --font-eng: 'Oswald', sans-serif;
       --font-chs: 'Noto Sans SC', sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
@@ -28,680 +29,1158 @@
 
     * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
 
+    ::-webkit-scrollbar { display: none; }
+
     body {
-      background-color: #000;
+      background-color: transparent;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
       font-family: var(--font-chs);
       color: var(--text-white);
-      /* 提供一点外围间距 */
-      padding: 20px; 
+      -webkit-font-smoothing: antialiased;
+      overflow: visible;
     }
 
-    /* ================= 核心外层主容器 ================= */
-    .dashboard-container {
+    /* ================= 模拟手机屏幕外壳 ================= */
+    .mobile-app-frame {
       position: relative;
       width: 100%;
-      max-width: 1400px;
-      height: 850px;
-      background-color: var(--bg-dark);
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
-      overflow: hidden;
-      box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
-      display: grid;
-      grid-template-columns: 320px 1fr 280px;
-      padding: 30px 40px;
-      isolation: isolate;
+      max-width: 430px;
+      height: 100vh;
+      max-height: 932px;
+      overflow: visible; /* 允许立绘破窗 */
+      display: flex;
+      flex-direction: column;
     }
 
-    /* 细微的背景网格点与装饰十字线 */
-    .dashboard-container::before {
-      content: "";
+    /* 背景裁切层：严格困住背景底色和水印 */
+    .frame-bg-clipper {
       position: absolute;
       inset: 0;
-      background-image: 
-        radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-      background-size: 20px 20px;
-      z-index: -2;
-      pointer-events: none;
+      background-color: var(--bg-dark);
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+      overflow: hidden;
+      z-index: 0;
     }
 
-    /* 背景巨大水印文字 DOKUHA */
+    @media (max-height: 850px) {
+      .mobile-app-frame { max-height: 100vh; }
+      .frame-bg-clipper { border-radius: 0; border: none; }
+    }
+
+    /* ================= 背景环境组 ================= */
+    .bg-dots {
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.03) 1px, transparent 0);
+      background-size: 24px 24px;
+    }
     .bg-watermark {
-      position: absolute;
-      top: 15%;
-      left: 30%;
-      font-family: var(--font-eng);
-      font-size: 320px;
-      font-weight: 700;
-      color: rgba(255, 255, 255, 0.02);
-      line-height: 1;
-      pointer-events: none;
-      z-index: -1;
-      letter-spacing: -5px;
+      position: absolute; top: 12%; right: -15%;
+      font-family: var(--font-eng); font-size: 160px; font-weight: 900;
+      color: rgba(255, 255, 255, 0.015); line-height: 1; letter-spacing: -4px;
+    }
+    .bg-slashes {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 30vh;
+      background: repeating-linear-gradient(-45deg, rgba(0,0,0,0.6) 0, rgba(0,0,0,0.6) 12px, transparent 12px, transparent 24px);
+      -webkit-mask-image: linear-gradient(to top, black 0%, transparent 100%);
+      mask-image: linear-gradient(to top, black 0%, transparent 100%);
     }
 
-    /* ================= 顶部全局导航列 ================= */
-    .top-nav {
-      position: absolute;
-      top: 30px; left: 40px; right: 40px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 10;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      letter-spacing: 2px;
+    /* ================= 顶部控制条 ================= */
+    .top-nav-bar {
+      position: absolute; top: 0; left: 0; right: 0; height: 64px;
+      display: grid; grid-template-columns: auto minmax(94px, 1fr) auto; align-items: end; gap: 10px; padding: 0 18px 12px;
+      background: linear-gradient(to bottom, rgba(18, 14, 20, 0.9) 20%, transparent); z-index: 50;
     }
-    .nav-left { display: flex; align-items: center; gap: 10px; color: var(--text-gray); }
-    .nav-left .dot { width: 8px; height: 8px; background: var(--accent-pink); border-radius: 50%; }
-    .nav-right { display: flex; align-items: center; gap: 10px; color: var(--text-gray); }
-    .nav-right .secure { color: var(--accent-pink); }
-    
-    /* 十字标 */
-    .cross-mark { color: var(--text-dark); flex-shrink: 0; }
-
-    /* ================= 左侧栏 (标题 / 聊天 / 音乐) ================= */
-    .col-left {
+    .nav-label {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 10px; font-weight: 800; letter-spacing: 2px;
+      white-space: nowrap;
+    }
+    .nav-label .dot { width: 8px; height: 8px; background: var(--accent-pink); border-radius: 50%; box-shadow: 0 0 8px rgba(223, 69, 118, 0.5); }
+    .nav-label .secure { color: var(--accent-pink); }
+    .nav-clock {
       display: flex;
       flex-direction: column;
-      margin-top: 40px;
-      z-index: 10;
+      align-items: center;
+      gap: 2px;
+      min-width: 0;
+      padding-bottom: 1px;
+      justify-self: center;
     }
-
-    /* 大标题区 */
-    .title-block { margin-bottom: 30px; }
-    .title-live {
-      font-family: var(--font-eng);
-      font-size: 80px;
-      line-height: 1;
-      font-weight: 700;
-      color: var(--text-white);
-      position: relative;
-      padding-left: 16px;
-      margin-bottom: -5px;
-    }
-    .title-live::before {
-      content: "";
-      position: absolute;
-      left: 0; top: 15px; bottom: 10px;
-      width: 6px;
-      background: var(--accent-pink);
-    }
-    .title-streaming {
+    .nav-clock-label {
       font-family: var(--font-mono);
-      font-size: 18px;
-      color: var(--accent-pink);
-      letter-spacing: 12px;
-      margin-left: 16px;
-      margin-bottom: 20px;
-      font-weight: 700;
-    }
-    .title-sub {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--text-gray);
-      letter-spacing: 3px;
-    }
-
-    /* 直播状态点 */
-    .on-air {
-      margin-bottom: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .on-air-tag {
-      font-family: var(--font-eng);
-      font-size: 16px;
-      color: var(--accent-pink);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      letter-spacing: 2px;
-    }
-    .status-online {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-gray);
-      letter-spacing: 1.5px;
-    }
-
-    /* 聊天面板 */
-    .chat-box {
-      width: 100%;
-      background: var(--panel-dark);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      margin-bottom: 24px;
-    }
-    .chat-header {
-      font-family: var(--font-eng);
-      font-size: 14px;
-      color: var(--text-white);
-      letter-spacing: 1px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .chat-msg {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-    .chat-avatar {
-      width: 28px; height: 28px;
-      background: #ccc;
-      border-radius: 50%;
-      flex-shrink: 0;
-      background-image: radial-gradient(circle at top left, #eee, #888);
-    }
-    .chat-content { flex: 1; }
-    .chat-name {
-      font-size: 11px;
-      color: var(--text-gray);
-      margin-bottom: 2px;
-    }
-    .chat-text {
-      font-size: 12px;
-      color: #dfdfdf;
-      font-weight: 500;
-    }
-    .chat-msg:last-child {
-      opacity: 0.5; /* 底部渐隐感 */
-    }
-    .chat-icon-pink {
-      color: var(--accent-pink);
-    }
-
-    /* 音乐播放器面板 */
-    .music-box {
-      width: 100%;
-      background: var(--panel-dark);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 16px 20px;
-    }
-    .music-header {
-      font-family: var(--font-eng);
-      font-size: 12px;
-      color: var(--text-white);
-      letter-spacing: 1px;
-      margin-bottom: 12px;
-    }
-    .music-waves {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--accent-pink);
-      margin-bottom: 12px;
-      height: 24px;
-    }
-    .wave-bars {
-      flex: 1;
-      height: 100%;
-      background: repeating-linear-gradient(90deg, var(--accent-pink) 0, var(--accent-pink) 2px, transparent 2px, transparent 6px);
-      clip-path: polygon(0 40%, 10% 20%, 20% 60%, 30% 0, 40% 100%, 50% 30%, 60% 80%, 70% 20%, 80% 90%, 90% 40%, 100% 60%, 100% 100%, 0 100%);
-    }
-    .music-title {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-gray);
-    }
-
-    /* ================= 中央立绘区 ================= */
-    .col-center {
-      position: relative;
-      display: flex;
-      justify-content: center;
-      align-items: flex-end; /* 立绘靠底 */
-      z-index: 5;
-    }
-    
-    .character-art {
-      width: 130%; /* 允许人物足够大 */
-      max-height: 110%; /* 突破顶部限制一点点 */
-      object-fit: contain;
-      object-position: bottom center;
-      filter: drop-shadow(0 20px 40px rgba(0,0,0,0.8));
-    }
-
-    /* ================= 右侧栏 (HUD状态 / ID / Follow) ================= */
-    .col-right {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      margin-top: 140px;
-      z-index: 10;
-    }
-
-    /* 右上点阵装饰 */
-    .decor-dots {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 30px;
-      align-items: flex-end;
-      padding-right: 15px;
-    }
-    .decor-dots span {
-      width: 4px; height: 4px;
-      background: var(--text-dark);
-      border-radius: 50%;
-    }
-
-    /* 状态卡片 (Energy & Mood) */
-    .hud-card {
-      width: 100%;
-      background: var(--panel-dark);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 16px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 12px 24px rgba(0,0,0,0.4);
-    }
-    .hud-card.compact {
-      padding: 14px 16px;
-    }
-    .hud-icon-box {
-      width: 50px;
-      height: 50px;
-      border: 2px solid var(--accent-pink);
-      border-radius: 8px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: var(--accent-pink);
-      box-shadow: inset 0 0 12px rgba(234, 69, 113, 0.2);
-    }
-    .hud-info { flex: 1; }
-    .hud-meta {
-      font-family: var(--font-mono);
-      font-size: 9px;
-      color: var(--accent-pink);
-      letter-spacing: 1px;
-      margin-top: 5px;
-      line-height: 1.4;
+      font-size: 7px;
+      font-weight: 800;
+      letter-spacing: 1.6px;
+      color: var(--text-dim);
       text-transform: uppercase;
     }
-    .hud-label {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--text-gray);
-      letter-spacing: 1px;
-    }
-    .hud-value {
-      font-family: var(--font-eng);
-      font-size: 32px;
-      font-weight: 700;
-      color: var(--text-white);
-      line-height: 1.1;
-      margin-bottom: 6px;
-    }
-    .progress-track {
-      width: 100%;
-      height: 6px;
-      background: var(--accent-dim);
-      border-radius: 3px;
+    .nav-clock-value {
+      max-width: 126px;
       overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: var(--accent-pink);
-      border-radius: 3px;
-    }
-
-    /* 右侧条形码区域 */
-    .barcode-area {
-      margin-top: 30px;
-      text-align: right;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 8px;
-    }
-    .barcode-img {
-      width: 90px;
-      height: 20px;
-      background: repeating-linear-gradient(90deg, var(--text-gray) 0, var(--text-gray) 2px, transparent 2px, transparent 4px, var(--text-gray) 4px, var(--text-gray) 5px, transparent 5px, transparent 8px);
-    }
-    .barcode-text {
+      text-overflow: ellipsis;
+      white-space: nowrap;
       font-family: var(--font-mono);
       font-size: 10px;
-      color: var(--text-gray);
-      line-height: 1.5;
-      letter-spacing: 2px;
-      white-space: pre-line;
-    }
-
-    /* ================= 底部绝对定位元素 ================= */
-    
-    /* 底部巨幅名字标 */
-    .bottom-nameplate {
-      position: absolute;
-      bottom: -1px; /* 紧贴底边 */
-      left: -1px;   /* 紧贴左边 */
-      background: var(--bg-dark);
-      border-top: 1px solid var(--border-color);
-      border-right: 1px solid var(--border-color);
-      border-top-right-radius: 12px;
-      padding: 24px 40px;
-      z-index: 20;
-    }
-    .bp-name {
-      font-size: 42px;
       font-weight: 900;
-      letter-spacing: 8px;
+      letter-spacing: 0.8px;
       color: var(--text-white);
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 4px;
+      text-shadow: 0 0 10px rgba(223, 69, 118, 0.22);
     }
-    .bp-sub {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--accent-pink);
-      letter-spacing: 2px;
-      font-weight: 700;
+    .nav-actions .nav-label { display: none; }
+
+    /* ================= 核心流式内容 ================= */
+    .content-flow {
+      position: relative; flex: 1;
+      overflow: visible;
+      padding: 60px 24px 100px 24px;
+      display: flex; flex-direction: column; z-index: 10;
     }
 
-    /* 底部居中操作图标 */
-    .bottom-actions {
+    /* 1. 立绘屏核心区 (去掉了文字排版后，它获得了更多延展空间) */
+    .hero-view {
+      position: relative;
+      width: 100%;
+      flex: 1;
+      min-height: 480px; /* 最小高度增大，让立绘展示更加充分 */
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      margin-bottom: 24px;
+    }
+
+    .hero-text-bg {
+      position: absolute; top: 15px; left: -10px; z-index: 1;
+    }
+    .hero-text-bg::before {
+      content: ""; position: absolute; top: 6px; bottom: 35px; left: 0; width: 6px; background: var(--accent-pink); border-radius: 2px;
+    }
+    .hero-live {
+      font-family: var(--font-eng); font-size: 96px; font-weight: 700; line-height: 1; margin-bottom: -2px; padding-left: 16px;
+    }
+    .hero-streaming {
+      font-family: var(--font-mono); font-size: 15px; font-weight: 800; color: var(--accent-pink); letter-spacing: 0.5em; margin-left: 20px;
+    }
+
+    /* 140% 立体破框立绘 */
+    .character-art {
       position: absolute;
-      bottom: 25px;
+      top: -5%;
       left: 50%;
       transform: translateX(-50%);
-      display: flex;
-      gap: 24px;
-      color: var(--text-gray);
-      z-index: 20;
+      width: 140%;
+      max-width: none;
+      height: 105%;
+      object-fit: cover;
+      object-position: center 5%;
+      z-index: 10;
+      filter: drop-shadow(0 20px 40px rgba(0,0,0,0.8));
+      pointer-events: none;
+      -webkit-mask-image: linear-gradient(to bottom, black 65%, transparent 100%);
+      mask-image: linear-gradient(to bottom, black 65%, transparent 100%);
     }
-    .bottom-actions svg {
-      width: 20px; height: 20px; cursor: pointer;
-      transition: color 0.2s;
+    .character-art.spine-art {
+      overflow: visible;
     }
-    .bottom-actions svg:hover { color: var(--accent-pink); }
+    .character-art.spine-art canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
 
-    /* 右下角关注模块 (斜切角特色) */
-    .bottom-follow {
+    /* 左侧悬窗：短能量排 */
+    .hud-float-stack {
       position: absolute;
-      bottom: -1px;
-      right: -1px;
-      background: var(--accent-pink);
-      padding: 16px 40px 16px 60px;
-      border-top-left-radius: 4px; 
-      /* CSS 切角技巧 */
-      clip-path: polygon(30px 0, 100% 0, 100% 100%, 0 100%);
-      font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 800;
-      color: var(--text-white);
-      letter-spacing: 3px;
+      bottom: 10px;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
       z-index: 20;
+    }
+
+    .hud-ribbon {
+      display: grid; grid-template-columns: 24px 142px; align-items: center; gap: 8px;
+      background: var(--glass-bg); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color); border-left: 3px solid var(--c); border-radius: 6px;
+      padding: 8px 12px 8px 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    }
+    .hud-ribbon-icon { display: flex; justify-content: center; align-items: center; color: var(--c); }
+    .hud-ribbon-icon svg { width: 18px; height: 18px; filter: drop-shadow(0 0 4px rgba(255,255,255,0.1)); }
+    .hud-ribbon-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow: hidden; }
+    .hud-ribbon-top { display: grid; grid-template-columns: minmax(0, 1fr) 86px; align-items: flex-end; gap: 6px; width: 100%; overflow: hidden; }
+    .hud-ribbon-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 9px; font-weight: 800; color: var(--text-gray); letter-spacing: 1px; }
+    .hud-ribbon-val { justify-self: end; width: 86px; max-width: 86px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-family: var(--font-eng); font-size: 18px; font-weight: 700; color: var(--text-white); line-height: 1; }
+    .hud-ribbon-val.text-value { font-family: var(--font-eng); font-size: 18px; letter-spacing: 1px; text-transform: uppercase; }
+    .ribbon-track { width: 100%; height: 3px; background: rgba(0,0,0,0.6); border-radius: 2px; overflow: hidden; }
+    .ribbon-fill { height: 100%; background: var(--c); border-radius: 2px; }
+
+    /* 右侧单向弥散玻璃板条形码 */
+    .barcode-widget {
+      position: absolute;
+      bottom: 10px;
+      right: -24px;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+      padding: 10px 24px 10px 100px; z-index: 20;
+    }
+    .barcode-widget::before {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(to left, rgba(22, 17, 24, 0.95) 0%, rgba(22, 17, 24, 0.4) 60%, transparent 100%);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      -webkit-mask-image: linear-gradient(to left, black 30%, transparent 100%); mask-image: linear-gradient(to left, black 30%, transparent 100%);
+      border-right: 1px solid rgba(255, 255, 255, 0.05); z-index: -1;
+    }
+    .barcode-widget .barcode-img {
+      width: 80px; height: 14px;
+      background: repeating-linear-gradient(90deg, var(--text-gray) 0, var(--text-gray) 1px, transparent 1px, transparent 3px, var(--text-gray) 3px, var(--text-gray) 4px, transparent 4px, transparent 6px);
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+    }
+    .barcode-widget .barcode-text {
+      max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-family: var(--font-mono); font-size: 8px; font-weight: 800; color: var(--text-gray); letter-spacing: 2px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8); text-align: right;
+    }
+
+    /* ================= 2. 极致洁净的波形台 ================= */
+    .inner-panel {
+      position: relative; z-index: 20;
+      background: var(--panel-dark); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    }
+    .music-box { padding: 12px 16px; }
+    .music-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .music-title-tag { font-family: var(--font-eng); font-size: 11px; color: var(--text-white); letter-spacing: 1px; }
+    .music-status { font-family: var(--font-mono); font-size: 9px; color: var(--text-gray); letter-spacing: 1px; }
+    .music-waves { display: flex; align-items: center; gap: 10px; color: var(--accent-pink); height: 20px; }
+    .music-waves span { font-size: 14px; }
+
+    .wave-bars {
+      flex: 1; height: 100%;
+      background: repeating-linear-gradient(90deg, var(--accent-pink) 0, var(--accent-pink) 1.5px, transparent 1.5px, transparent 4px);
+      clip-path: polygon(0 60%, 15% 20%, 30% 90%, 45% 10%, 60% 80%, 75% 30%, 90% 100%, 100% 40%, 100% 100%, 0 100%);
+    }
+
+    /* ================= 固定的底座 Dock ================= */
+    .bottom-hud-wrapper {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 86px; display: flex; align-items: flex-end; z-index: 50; filter: drop-shadow(0 -10px 20px rgba(0,0,0,0.6));
+    }
+    .hud-bg {
+      position: absolute; inset: 0; background: #110e14;
+      clip-path: polygon(0 0, calc(100% - 140px) 0, calc(100% - 115px) 16px, 100% 16px, 100% 100%, 0 100%); z-index: 1;
+    }
+    .hud-border-mask {
+      position: absolute; inset: -1px 0 0 0; background: var(--border-color);
+      clip-path: polygon(0 0, calc(100% - 139px) 0, calc(100% - 114px) 16px, 100% 16px, 100% 100%, 0 100%); z-index: 0;
+    }
+    .hud-active-line {
+      position: absolute; top: -1px; left: 24px; width: 40px; height: 2px;
+      background: #ffffff; z-index: 5; box-shadow: 0 0 10px rgba(255,255,255,0.9);
+    }
+
+    .hud-content {
+      position: relative; width: 100%; height: 100%; padding: 0 24px; display: flex; justify-content: space-between; align-items: center; z-index: 10;
+    }
+
+    .info-block { display: flex; flex-direction: column; justify-content: center; padding-bottom: 4px; }
+    .main-title { display: flex; align-items: center; font-size: 32px; font-weight: 900; letter-spacing: 4px; line-height: 1; margin-bottom: 6px; }
+    .main-title .name-last { color: var(--text-white); text-shadow: 0 0 12px rgba(255, 255, 255, 0.2); }
+    .main-title .name-first { color: var(--accent-pink); margin-left: 8px; }
+    .sub-text { font-family: var(--font-mono); font-size: 10px; font-weight: 800; color: var(--text-gray); letter-spacing: 3px; text-transform: uppercase; }
+    .sub-text .slash { color: var(--accent-pink); margin: 0 4px; font-weight: 900; }
+
+    .nav-actions { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+    .mode-toggle {
+      appearance: none;
+      border: 1px solid rgba(223, 69, 118, 0.45);
+      border-radius: 999px;
+      background: rgba(22, 18, 25, 0.78);
+      color: var(--accent-pink);
+      padding: 5px 8px;
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 1px;
       cursor: pointer;
     }
+    .character-art.static-art { overflow: visible; }
+    .character-art.static-art .standing-layer-stack {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .character-art .static-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center 5%;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+    .character-art .static-layer--face { z-index: 10; }
+    .character-art .static-layer--mouth { z-index: 20; }
+    .character-art .static-layer--base { z-index: 30; }
+    .character-art .static-layer--eye { z-index: 40; }
+    .character-art .static-layer--brow { z-index: 50; }
+    .character-art .static-layer--other { z-index: 60; }
+    .character-art .static-layer--accessory { z-index: 70; }
+
+    .action-block { display: flex; align-items: center; justify-content: flex-end; height: 100%; padding-top: 14px; }
+    .icon-group { display: flex; align-items: center; gap: 20px; color: var(--text-gray); }
+    .icon-group svg { width: 22px; height: 22px; cursor: pointer; transition: color 0.2s ease, transform 0.2s ease; }
+    .icon-group svg:hover { color: var(--accent-pink); transform: translateY(-2px) scale(1.1); }
+
+    @media (max-width: 390px) {
+      .top-nav-bar { padding-inline: 14px; grid-template-columns: auto minmax(82px, 1fr) auto; gap: 8px; }
+      .nav-label { font-size: 9px; letter-spacing: 1.3px; }
+      .nav-clock-value { max-width: 104px; font-size: 9px; letter-spacing: 0.4px; }
+      .nav-actions { gap: 7px; }
+    }
+
   </style>
 </head>
 <body>
 
-  <!-- 主面板 -->
-  <div class="dashboard-container">
-    
-    <!-- 背景大水印 -->
-    <div class="bg-watermark">DOKUHA</div>
+  <!-- 主外壳：全放开限制，支持物理破窗 -->
+  <main class="mobile-app-frame">
 
-    <!-- 顶部全局导航 -->
-    <div class="top-nav">
-      <div class="nav-left">
-        <div class="dot"></div>
-        <span>LIVE STREAM</span>
-        <span class="cross-mark">X</span>
-      </div>
-      <div class="nav-right">
-        <span>CONNECTION</span>
-        <span class="secure">SECURE</span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-pink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-      </div>
+    <!-- 背板裁切器 -->
+    <div class="frame-bg-clipper">
+      <div class="bg-watermark">DOKUHA</div>
+      <div class="bg-dots"></div>
+      <div class="bg-slashes"></div>
     </div>
 
-    <!-- 左侧内容柱 -->
-    <div class="col-left">
-      <div class="title-block">
-        <div class="title-live">LIVE</div>
-        <div class="title-streaming">STREAMING</div>
-        <div class="title-sub">/// DOKUHA PROTOCOL &nbsp;&nbsp;&nbsp;X</div>
+    <!-- 顶部状态栏 -->
+    <nav class="top-nav-bar">
+      <div class="nav-label"><span class="dot"></span> LIVE STREAM</div>
+      <div class="nav-clock" aria-label="Current story time">
+        <span class="nav-clock-label">LOCAL TIME</span>
+        <span class="nav-clock-value" data-dokuha-field="current-time">06.29 20:00</span>
+      </div>
+      <div class="nav-actions">
+        <button class="mode-toggle" type="button" data-dokuha-action="toggle-standing-mode">MODE:<span data-dokuha-field="standing-mode">STATIC</span></button>
+        <div class="nav-label">SECURE <span class="secure">●</span></div>
+      </div>
+    </nav>
+
+    <!-- 核心流式骨架 (溢出可见) -->
+    <section class="content-flow">
+
+      <!-- 1. 核心监视区 (极致留白给立绘) -->
+      <div class="hero-view">
+        <div class="hero-text-bg">
+          <div class="hero-live">LIVE</div>
+          <div class="hero-streaming">STREAMING</div>
+        </div>
+
+        <!-- 爆屏悬浮立绘 -->
+        <div id="dokuha-spine" class="character-art static-art" data-dokuha-standing role="img" aria-label="Kosaka Dokuha"></div>
+
+        <!-- 浮动小组件 -->
+        <div class="hud-float-stack">
+          <div class="hud-ribbon" style="--c: var(--accent-pink);">
+            <div class="hud-ribbon-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
+            <div class="hud-ribbon-info">
+              <div class="hud-ribbon-top"><span class="hud-ribbon-label">MODE</span><span class="hud-ribbon-val text-value" data-dokuha-field="story-mode">NORMAL</span></div>
+            </div>
+          </div>
+          <div class="hud-ribbon" style="--c: #9c8a9e;">
+            <div class="hud-ribbon-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div>
+            <div class="hud-ribbon-info">
+              <div class="hud-ribbon-top"><span class="hud-ribbon-label">EMOTION</span><span class="hud-ribbon-val text-value" data-dokuha-field="dynamic-emotion">SLIGHTLY_COLD</span></div>
+            </div>
+          </div>
+          <div class="hud-ribbon" style="--c: #df4576;">
+            <div class="hud-ribbon-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.4-9.3-8.3C.8 9.5 2.1 5.3 5.7 4.5 7.8 4 10 5.1 12 7.4c2-2.3 4.2-3.4 6.3-2.9 3.6.8 4.9 5 3 8.2C19 16.6 12 21 12 21z"></path></svg></div>
+            <div class="hud-ribbon-info">
+              <div class="hud-ribbon-top"><span class="hud-ribbon-label">FAMILIARITY</span><span class="hud-ribbon-val" data-dokuha-field="familiarity">0</span></div>
+              <div class="ribbon-track"><div class="ribbon-fill" data-dokuha-bar="familiarity" style="width: 0%;"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="barcode-widget">
+          <div class="barcode-img"></div>
+          <div class="barcode-text" data-dokuha-field="identity">DOKUHA / NEIGHBOR</div>
+        </div>
       </div>
 
-      <div class="on-air">
-        <div class="on-air-tag">
-          <div class="dot" style="width:10px;height:10px;background:var(--accent-pink);border-radius:50%;"></div>
-          ON AIR
-        </div>
-        <div class="status-online">STATUS: ONLINE <span class="cross-mark" style="margin-left:8px">x</span></div>
-      </div>
-
-      <!-- 聊天框面板 -->
-      <div class="chat-box">
-        <div class="chat-header">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--accent-pink)"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-          LIVE CHAT
-        </div>
-        
-        <div class="chat-msg">
-          <div class="chat-avatar"></div>
-          <div class="chat-content">
-            <div class="chat-name">夜行者_77</div>
-            <div class="chat-text">狐狸小姐今天也超酷！</div>
-          </div>
-          <svg class="chat-icon-pink" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-        </div>
-
-        <div class="chat-msg">
-          <div class="chat-avatar" style="background:#555"></div>
-          <div class="chat-content">
-            <div class="chat-name">黑白猫</div>
-            <div class="chat-text">这套穿搭好戳我~</div>
-          </div>
-        </div>
-
-        <div class="chat-msg">
-          <div class="chat-avatar" style="background:#888"></div>
-          <div class="chat-content">
-            <div class="chat-name">Echo_404</div>
-            <div class="chat-text">声音也太好听了吧!!</div>
-          </div>
-        </div>
-
-        <div class="chat-msg">
-          <div class="chat-avatar" style="border:1px solid var(--accent-pink)"></div>
-          <div class="chat-content">
-            <div class="chat-name" style="color:var(--accent-pink)">Lostrab</div>
-            <div class="chat-text">已关注，从今天开始支持~</div>
-          </div>
-        </div>
-        
-        <!-- 截断号 -->
-        <div style="text-align:center; color:var(--accent-pink); font-size:16px; letter-spacing:4px">...</div>
-      </div>
-
-      <!-- 音乐播放面板 -->
-      <div class="music-box">
+      <!-- 2. 关系状态台 -->
+      <div class="inner-panel music-box">
         <div class="music-header">
-          <span style="color:var(--accent-pink)">♪</span> NOW PLAYING
+          <div class="music-title-tag"><span style="color:var(--accent-pink); font-size:14px; margin-right:4px;">♡</span>RELATION PROFILE</div>
+          <div class="music-status" data-dokuha-field="familiarity-profile">LOW / NEIGHBOR / NON_ATTACHED</div>
         </div>
         <div class="music-waves">
-          <span>♛</span>
+          <span style="font-size:14px">♛</span>
           <div class="wave-bars"></div>
-          <div class="wave-bars" style="clip-path: polygon(0 80%, 20% 20%, 40% 90%, 60% 30%, 80% 100%, 100% 40%, 100% 100%, 0 100%);"></div>
-        </div>
-        <div class="music-title">Night Drive / 88%</div>
-      </div>
-    </div>
-
-    <!-- 中央立绘层 -->
-    <div class="col-center">
-      <img class="character-art" src="https://i.ibb.co/RGgdW2R1/dkh-work-1.png" alt="Kosaka Dokuha">
-    </div>
-
-    <!-- 右侧内容柱 -->
-    <div class="col-right">
-      <div class="decor-dots">
-        <span></span><span></span><span></span><span></span><span></span>
-      </div>
-
-      <!-- HUD 能量条 -->
-      <div class="hud-card">
-        <div class="hud-icon-box">
-          <!-- 闪电 Icon -->
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-        </div>
-        <div class="hud-info">
-          <div class="hud-label">ENERGY</div>
-          <div class="hud-value" data-dokuha-field="energy">72%</div>
-          <div class="progress-track"><div class="progress-fill" data-dokuha-bar="energy" style="width:72%"></div></div>
+          <div class="wave-bars" style="clip-path:polygon(0 70%, 15% 30%, 30% 80%, 45% 10%, 60% 90%, 75% 40%, 90% 100%, 100% 20%, 100% 100%, 0 100%);"></div>
         </div>
       </div>
 
-      <!-- HUD 心情条 -->
-      <div class="hud-card">
-        <div class="hud-icon-box">
-          <!-- 爱心 Icon -->
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-        </div>
-        <div class="hud-info">
-          <div class="hud-label">MOOD</div>
-          <div class="hud-value" data-dokuha-field="mood">68%</div>
-          <div class="progress-track"><div class="progress-fill" data-dokuha-bar="mood" style="width:68%"></div></div>
-        </div>
-      </div>
+    </section>
 
-      <!-- HUD 好感度 -->
-      <div class="hud-card compact">
-        <div class="hud-icon-box">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.4-9.3-8.3C.8 9.5 2.1 5.3 5.7 4.5 7.8 4 10 5.1 12 7.4c2-2.3 4.2-3.4 6.3-2.9 3.6.8 4.9 5 3 8.2C19 16.6 12 21 12 21z"></path></svg>
-        </div>
-        <div class="hud-info">
-          <div class="hud-label">AFFECTION</div>
-          <div class="hud-value" data-dokuha-field="affection">0/255</div>
-          <div class="progress-track"><div class="progress-fill" data-dokuha-bar="affection" style="width:0%"></div></div>
-          <div class="hud-meta" data-dokuha-field="affection-profile">LOW / NEIGHBOR / NON_ATTACHED</div>
-        </div>
-      </div>
+    <!-- 底部控制台 -->
+    <div class="bottom-hud-wrapper">
+      <div class="hud-border-mask"></div>
+      <div class="hud-bg"></div>
+      <div class="hud-active-line"></div>
 
-      <!-- 条形码区 -->
-      <div class="barcode-area">
-        <div class="barcode-img"></div>
-        <div class="barcode-text" data-dokuha-field="identity">
-          ID: LOSTRAB_722<br>LOCAL HOST
+      <div class="hud-content">
+        <div class="info-block">
+          <div class="main-title">
+            <span class="name-last">狐坂</span>
+            <span class="name-first">毒羽</span>
+          </div>
+          <div class="sub-text" data-dokuha-field="profileLine">NEIGHBOR <span class="slash">/</span> LOW <span class="slash">/</span> NON_ATTACHED</div>
         </div>
-        <div class="cross-mark" style="color:var(--text-dark); margin-top:10px; font-size:16px;">X</div>
+
+        <div class="action-block">
+          <div class="icon-group">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- 左下硬核名字隔离板 -->
-    <div class="bottom-nameplate">
-      <div class="bp-name"><span data-dokuha-field="hostName">狐坂 毒羽</span> <span style="font-size:24px;color:var(--accent-pink)">X</span></div>
-      <div class="bp-sub" data-dokuha-field="profileLine">LOSTRAB_722 / LOCAL HOST / NEIGHBOR</div>
-    </div>
-
-    <!-- 底部操作按钮列 -->
-    <div class="bottom-actions">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-    </div>
-
-    <!-- 右下角斜切角按钮 -->
-    <div class="bottom-follow">
-      /// FOLLOW ME //
-    </div>
-
-  </div>
+  </main>
   <script>
-    (function () {
-      'use strict';
-
-      const LABELS = {
-        affectionTier: { low: 'LOW', mid: 'MID', high: 'HIGH' },
-        attachmentLevel: { non_attached: 'NON_ATTACHED', light_attached: 'LIGHT_ATTACHED', heavy_attached: 'HEAVY_ATTACHED' },
-        relationshipStage: { neighbor: 'NEIGHBOR', friend: 'FRIEND', lover: 'LOVER' }
+    window.DOKUHA_STANDING_MODE = (() => {
+      const params = new URLSearchParams(location.search);
+      const value = params.get('standingMode') || params.get('mode') || 'static';
+      return value === 'static' ? 'static' : 'spine';
+    })();
+  </script>
+  <script>
+    (() => {
+      const CONFIG = {
+        skeleton: "dokuha-spine-assets/dkh2.0.json",
+        atlas: "dokuha-spine-assets/dkh2.0.atlas",
+        fps: 30,
+        animations: [
+          { name: "animation", startFrame: 80, endFrame: 160, mode: "loop" },
+          { name: "hair", startFrame: 80, endFrame: 160, mode: "loop" },
+          { name: "eye", startFrame: 0, endFrame: 30, mode: "blink", intervalSeconds: 3 }
+        ],
+        verticalLook: {
+          upAnimation: "up",
+          downAnimation: "down",
+          startFrame: 80,
+          endFrame: 120,
+          triggerRange: 0.62,
+          inputCurve: 0.9,
+          spring: 18,
+          dampingRatio: 0.85,
+          maxVelocity: 10,
+          maxAlpha: 0.58
+        },
+        horizontalLook: {
+          leftAnimation: "left",
+          rightAnimation: "right",
+          startFrame: 80,
+          endFrame: 120,
+          triggerRange: 0.62,
+          inputCurve: 0.9,
+          spring: 18,
+          dampingRatio: 0.85,
+          maxVelocity: 10,
+          maxAlpha: 0.72
+        },
+        lookMaxAlpha: 0.72,
+        lookDampenedAlpha: 0.2,
+        lookDampenedBones: [
+          "bone40", "bone179", "bone180",
+          "bone48", "bone49", "bone50", "bone51", "bone52", "bone53", "bone54",
+          "bone55", "bone56", "bone57", "bone58", "bone59", "bone60", "bone61",
+          "bone62", "bone63", "bone64", "bone65", "bone66", "bone67", "bone68",
+          "bone69", "bone93", "bone94", "bone95", "bone96", "bone97", "bone102",
+          "bone103", "bone104", "bone105", "bone106", "bone107"
+        ],
+        lookEyeAlpha: 0.82,
+        lookEyeBones: ["bone43", "bone44", "bone45", "bone46", "bone47", "bone181", "bone182"],
+        postLookAnimations: ["hair"],
+        postLookAlpha: { hair: 0.5 }
       };
+
+      const mount = document.getElementById("dokuha-spine");
+      if (!mount) return;
+
+      function sampleSegment(rule, elapsedSeconds) {
+        const startSeconds = rule.startFrame / CONFIG.fps;
+        const endSeconds = rule.endFrame / CONFIG.fps;
+        const segmentSeconds = Math.max(endSeconds - startSeconds, 1 / CONFIG.fps);
+
+        if (rule.mode === "blink") {
+          const intervalSeconds = Math.max(rule.intervalSeconds || 3, segmentSeconds);
+          const intervalTime = elapsedSeconds % intervalSeconds;
+          const sampleTime = intervalTime <= segmentSeconds
+            ? startSeconds + intervalTime
+            : startSeconds;
+          return sampleTime;
+        }
+
+        return startSeconds + (elapsedSeconds % segmentSeconds);
+      }
+
+      function configureAtlasTextures(resource) {
+        const atlas = resource.spineAtlas;
+        if (!atlas) return;
+
+        const baseTextures = new Set();
+        for (const page of atlas.pages || []) {
+          if (page.baseTexture) baseTextures.add(page.baseTexture);
+        }
+        for (const region of atlas.regions || []) {
+          if (region.texture && region.texture.baseTexture) {
+            baseTextures.add(region.texture.baseTexture);
+          }
+        }
+
+        for (const baseTexture of baseTextures) {
+          if (PIXI.MIPMAP_MODES) baseTexture.mipmap = PIXI.MIPMAP_MODES.OFF;
+          if (typeof baseTexture.update === "function") baseTexture.update();
+        }
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function shapeLookInput(value, rule) {
+        const magnitude = Math.pow(Math.abs(value), rule.inputCurve || 1);
+        return Math.sign(value) * clamp(magnitude, 0, 1);
+      }
+
+      function springLookValue(state, targetValue, deltaSeconds, rule) {
+        const dt = clamp(deltaSeconds || 1 / 60, 1 / 120, 1 / 20);
+        const spring = rule.spring || 18;
+        const dampingRatio = rule.dampingRatio || 0.85;
+        const maxVelocity = rule.maxVelocity || 10;
+        const f = 1 + 2 * dt * dampingRatio * spring;
+        const springSquared = spring * spring;
+        const dtSpringSquared = dt * springSquared;
+        const dt2SpringSquared = dt * dtSpringSquared;
+        const determinantInv = 1 / (f + dt2SpringSquared);
+        const nextValue = (
+          f * state.value +
+          dt * state.velocity +
+          dt2SpringSquared * targetValue
+        ) * determinantInv;
+        const nextVelocity = (
+          state.velocity +
+          dtSpringSquared * (targetValue - state.value)
+        ) * determinantInv;
+
+        state.value = clamp(nextValue, -1, 1);
+        state.velocity = clamp(nextVelocity, -maxVelocity, maxVelocity);
+        if ((state.value <= -1 && state.velocity < 0) || (state.value >= 1 && state.velocity > 0)) {
+          state.velocity = 0;
+        }
+        if (Math.abs(targetValue - state.value) < 0.001 && Math.abs(state.velocity) < 0.01) {
+          state.value = targetValue;
+          state.velocity = 0;
+        }
+        return state.value;
+      }
+
+      function sampleDirectionalLook(lookValue, rule, negativeDirection, positiveDirection) {
+        const direction = lookValue < 0 ? negativeDirection : positiveDirection;
+        const strength = clamp(Math.abs(lookValue), 0, 1);
+        const startSeconds = rule.startFrame / CONFIG.fps;
+        const endSeconds = rule.endFrame / CONFIG.fps;
+
+        return {
+          direction,
+          strength,
+          time: startSeconds + (endSeconds - startSeconds) * strength
+        };
+      }
+
+      function scaleLookSamples(samples) {
+        const activeSamples = samples.filter((sample) => sample.alpha > 0.001);
+        const totalAlpha = Math.sqrt(activeSamples.reduce((sum, sample) => sum + sample.alpha * sample.alpha, 0));
+        const maxAlpha = CONFIG.lookMaxAlpha || 1;
+        const scale = totalAlpha > maxAlpha ? maxAlpha / totalAlpha : 1;
+        return activeSamples
+          .map((sample) => ({ ...sample, alpha: sample.alpha * scale }))
+          .sort((a, b) => a.alpha - b.alpha);
+      }
+
+      function snapshotBones(skeleton, boneNames) {
+        const snapshot = new Map();
+        for (const boneName of boneNames) {
+          const bone = skeleton.findBone(boneName);
+          if (!bone) continue;
+          snapshot.set(boneName, {
+            x: bone.x,
+            y: bone.y,
+            rotation: bone.rotation,
+            scaleX: typeof bone.scaleX === "number" ? bone.scaleX : 1,
+            scaleY: typeof bone.scaleY === "number" ? bone.scaleY : 1,
+            shearX: typeof bone.shearX === "number" ? bone.shearX : 0,
+            shearY: typeof bone.shearY === "number" ? bone.shearY : 0
+          });
+        }
+        return snapshot;
+      }
+
+      function shortestAngleDelta(fromAngle, toAngle) {
+        return ((((toAngle - fromAngle) % 360) + 540) % 360) - 180;
+      }
+
+      function dampBonesToSnapshot(skeleton, snapshot, keepLookAlpha) {
+        const alpha = clamp(keepLookAlpha, 0, 1);
+        for (const [boneName, beforeLook] of snapshot) {
+          const bone = skeleton.findBone(boneName);
+          if (!bone) continue;
+          bone.x = beforeLook.x + (bone.x - beforeLook.x) * alpha;
+          bone.y = beforeLook.y + (bone.y - beforeLook.y) * alpha;
+          bone.rotation = beforeLook.rotation + shortestAngleDelta(beforeLook.rotation, bone.rotation) * alpha;
+          if (typeof bone.scaleX === "number") bone.scaleX = beforeLook.scaleX + (bone.scaleX - beforeLook.scaleX) * alpha;
+          if (typeof bone.scaleY === "number") bone.scaleY = beforeLook.scaleY + (bone.scaleY - beforeLook.scaleY) * alpha;
+          if (typeof bone.shearX === "number") bone.shearX = beforeLook.shearX + shortestAngleDelta(beforeLook.shearX, bone.shearX) * alpha;
+          if (typeof bone.shearY === "number") bone.shearY = beforeLook.shearY + shortestAngleDelta(beforeLook.shearY, bone.shearY) * alpha;
+        }
+      }
+
+      function boot() {
+        if (window.DOKUHA_STANDING_MODE === "static") return;
+        if (!window.PIXI || !PIXI.spine) return;
+
+        const app = new PIXI.Application({
+          width: Math.max(mount.clientWidth, 1),
+          height: Math.max(mount.clientHeight, 1),
+          antialias: true,
+          autoDensity: true,
+          resolution: Math.min(window.devicePixelRatio || 1, 2),
+          backgroundAlpha: 0
+        });
+        mount.appendChild(app.view);
+
+        PIXI.Assets.add({
+          alias: "dokuha-spine",
+          src: CONFIG.skeleton,
+          data: { spineAtlasFile: CONFIG.atlas }
+        });
+
+        PIXI.Assets.load("dokuha-spine").then((resource) => {
+          configureAtlasTextures(resource);
+          const spineData = resource.spineData || resource;
+          const spineView = new PIXI.spine.Spine(spineData);
+          spineView.autoUpdate = false;
+          spineView.state.clearTracks();
+          app.stage.addChild(spineView);
+
+          const tracks = CONFIG.animations.map((rule) => {
+            const animation = spineData.findAnimation(rule.name);
+            if (!animation) throw new Error(`Animation not found: ${rule.name}`);
+            return {
+              ...rule,
+              animation,
+              lastTime: rule.startFrame / CONFIG.fps
+            };
+          });
+          const verticalLookAnimations = {
+            up: spineData.findAnimation(CONFIG.verticalLook.upAnimation),
+            down: spineData.findAnimation(CONFIG.verticalLook.downAnimation)
+          };
+          if (!verticalLookAnimations.up || !verticalLookAnimations.down) {
+            throw new Error("Animation not found: up/down");
+          }
+          const horizontalLookAnimations = {
+            left: spineData.findAnimation(CONFIG.horizontalLook.leftAnimation),
+            right: spineData.findAnimation(CONFIG.horizontalLook.rightAnimation)
+          };
+          if (!horizontalLookAnimations.left || !horizontalLookAnimations.right) {
+            throw new Error("Animation not found: left/right");
+          }
+          const lookBlend = PIXI.spine.MixBlend.add !== undefined
+            ? PIXI.spine.MixBlend.add
+            : PIXI.spine.MixBlend.replace;
+          const postLookTrackNames = new Set(CONFIG.postLookAnimations || []);
+
+          let targetLookX = 0;
+          let targetLookY = 0;
+          const horizontalLookSpringState = { value: 0, velocity: 0 };
+          const verticalLookSpringState = { value: 0, velocity: 0 };
+          window.addEventListener("pointermove", (event) => {
+            const halfWidth = Math.max(window.innerWidth * 0.5, 1);
+            const halfHeight = Math.max(window.innerHeight * 0.5, 1);
+            const horizontalRange = CONFIG.horizontalLook.triggerRange || 1;
+            const verticalRange = CONFIG.verticalLook.triggerRange || 1;
+            targetLookX = shapeLookInput(
+              clamp((event.clientX - halfWidth) / (halfWidth * horizontalRange), -1, 1),
+              CONFIG.horizontalLook
+            );
+            targetLookY = shapeLookInput(
+              clamp((event.clientY - halfHeight) / (halfHeight * verticalRange), -1, 1),
+              CONFIG.verticalLook
+            );
+          }, { passive: true });
+          document.addEventListener("mouseleave", () => {
+            targetLookX = 0;
+            targetLookY = 0;
+          });
+          window.addEventListener("blur", () => {
+            targetLookX = 0;
+            targetLookY = 0;
+          });
+
+          function resizeStage() {
+            app.renderer.resize(Math.max(mount.clientWidth, 1), Math.max(mount.clientHeight, 1));
+          }
+
+          function fitSpine() {
+            const bounds = spineView.getLocalBounds();
+            const safeWidth = Math.max(bounds.width, 1);
+            const safeHeight = Math.max(bounds.height, 1);
+            const screenWidth = app.screen.width;
+            const screenHeight = app.screen.height;
+            const scale = Math.max(screenWidth / safeWidth, screenHeight / safeHeight);
+
+            spineView.scale.set(scale);
+            spineView.position.set(
+              screenWidth * 0.5 - (bounds.x + safeWidth * 0.5) * scale,
+              screenHeight * 0.05 - bounds.y * scale
+            );
+          }
+
+          function applyTrackSample(track, elapsedSeconds, alpha = 1) {
+              const sampleTime = sampleSegment(track, elapsedSeconds);
+              track.animation.apply(
+                spineView.skeleton,
+                track.lastTime,
+                sampleTime,
+                false,
+                [],
+                alpha,
+                PIXI.spine.MixBlend.replace,
+                PIXI.spine.MixDirection.mixIn
+              );
+              track.lastTime = sampleTime;
+          }
+
+          function applySamples(elapsedSeconds, deltaSeconds = 1 / 60) {
+            spineView.skeleton.setToSetupPose();
+
+            for (const track of tracks) {
+              if (!postLookTrackNames.has(track.name)) applyTrackSample(track, elapsedSeconds);
+            }
+
+            const dampenedLookSnapshot = snapshotBones(spineView.skeleton, CONFIG.lookDampenedBones || []);
+            const eyeLookSnapshot = snapshotBones(spineView.skeleton, CONFIG.lookEyeBones || []);
+            const lookSamples = [];
+            const currentLookY = springLookValue(verticalLookSpringState, targetLookY, deltaSeconds, CONFIG.verticalLook);
+            const verticalLookSample = sampleDirectionalLook(currentLookY, CONFIG.verticalLook, "up", "down");
+            lookSamples.push({
+              animation: verticalLookAnimations[verticalLookSample.direction],
+              alpha: verticalLookSample.strength * CONFIG.verticalLook.maxAlpha,
+              time: verticalLookSample.time
+            });
+
+            const currentLookX = springLookValue(horizontalLookSpringState, targetLookX, deltaSeconds, CONFIG.horizontalLook);
+            const horizontalLookSample = sampleDirectionalLook(currentLookX, CONFIG.horizontalLook, "left", "right");
+            lookSamples.push({
+              animation: horizontalLookAnimations[horizontalLookSample.direction],
+              alpha: horizontalLookSample.strength * CONFIG.horizontalLook.maxAlpha,
+              time: horizontalLookSample.time
+            });
+
+            for (const lookSample of scaleLookSamples(lookSamples)) {
+              lookSample.animation.apply(
+                spineView.skeleton,
+                lookSample.time,
+                lookSample.time,
+                false,
+                [],
+                lookSample.alpha,
+                lookBlend,
+                PIXI.spine.MixDirection.mixIn
+              );
+            }
+            dampBonesToSnapshot(spineView.skeleton, dampenedLookSnapshot, CONFIG.lookDampenedAlpha);
+            dampBonesToSnapshot(spineView.skeleton, eyeLookSnapshot, CONFIG.lookEyeAlpha);
+
+            for (const track of tracks) {
+              if (postLookTrackNames.has(track.name)) {
+                applyTrackSample(track, elapsedSeconds, CONFIG.postLookAlpha[track.name] || 1);
+              }
+            }
+
+            spineView.skeleton.updateWorldTransform();
+            spineView.update(0);
+          }
+
+          let elapsed = 0;
+          resizeStage();
+          applySamples(elapsed);
+          fitSpine();
+
+          const resizeObserver = new ResizeObserver(() => {
+            resizeStage();
+            fitSpine();
+          });
+          resizeObserver.observe(mount);
+
+          app.ticker.add(() => {
+            const deltaSeconds = app.ticker.deltaMS / 1000;
+            elapsed += deltaSeconds;
+            applySamples(elapsed, deltaSeconds);
+          });
+        }).catch((error) => {
+          console.error("Failed to load Dokuha Spine:", error);
+        });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", boot, { once: true });
+      } else {
+        boot();
+      }
+    })();
+  </script>
+  <script>
+    (() => {
+      const INITIAL_PARAMS = new URLSearchParams(location.search);
+      const MASK_ACCESSORY_NAMES = ["no_mask", "mask_up", "mask_down"];
+      const STACKABLE_ACCESSORY_NAMES = ["headphones"];
+      const ACCESSORY_NAMES = [...MASK_ACCESSORY_NAMES, ...STACKABLE_ACCESSORY_NAMES];
+      function normalizeAccessories(value) {
+        const raw = Array.isArray(value) ? value.join(",") : typeof value === "string" ? value : "";
+        let maskState = "no_mask";
+        let hasHeadphones = false;
+        raw.split(/[,| ]+/).forEach((name) => {
+          if (MASK_ACCESSORY_NAMES.includes(name)) {
+            maskState = name;
+            return;
+          }
+          if (name === "headphones") hasHeadphones = true;
+        });
+        return hasHeadphones ? [maskState, "headphones"] : [maskState];
+      }
+      function readAccessories(params) {
+        const raw = [params.get("accessories"), params.get("accessory"), params.get("acc")].filter(Boolean).join(",");
+        const names = new Set(normalizeAccessories(raw));
+        ACCESSORY_NAMES.forEach((name) => {
+          const value = params.get(name);
+          if (value === "1" || value === "true" || value === "on" || value === "yes") names.add(name);
+        });
+        return ACCESSORY_NAMES.filter((name) => names.has(name));
+      }
+      const DEFAULT_STATE = {
+        familiarity: { points: 0, tier: "low" },
+        coreStates: { mode: "normal", relationshipStage: "neighbor", attachmentLevel: "non_attached" },
+        mentalStates: { disorderActive: [], longTermEmotion: "normal", dynamicEmotion: "slightly_cold" },
+        outfit: INITIAL_PARAMS.get("outfit") || "streetwear_full",
+        expression: INITIAL_PARAMS.get("expression") || INITIAL_PARAMS.get("exp") || "exp_default",
+        accessories: readAccessories(INITIAL_PARAMS),
+        standingMode: window.DOKUHA_STANDING_MODE || "static"
+      };
+      const DEFAULT_SYSTEM = {
+        current_time: { year: 2026, month: 6, day: 29, hour: 20, minute: 0, day_of_week: "周一" }
+      };
+      const LABELS = {
+        mode: { normal: "NORMAL", tired_mode: "TIRED", hell_mode: "HELL" },
+        familiarityTier: { low: "LOW", mid: "MID", high: "HIGH" },
+        attachmentLevel: { non_attached: "NON_ATTACHED", light_attached: "LIGHT_ATTACHED", heavy_attached: "HEAVY_ATTACHED" },
+        relationshipStage: { neighbor: "NEIGHBOR", friend: "FRIEND", lover: "LOVER" },
+        longTermEmotion: { depressed: "DEPRESSED", exhausted: "EXHAUSTED", normal: "NORMAL", comfortable: "COMFORTABLE", irritated: "IRRITATED", paralyzed: "PARALYZED" },
+        dynamicEmotion: { normal: "NORMAL", warm: "WARM", passionate: "PASSIONATE", slightly_cold: "SLIGHTLY_COLD", freezing_cold: "FREEZING_COLD" }
+      };
+      const FAMILIARITY_MAX = 500;
+      const FAMILIARITY_TIER_THRESHOLDS = { mid: 100, high: 250 };
+      const STATIC_BASE = new URL("../../dokuha-assets/standing/", location.href).href;
+      const OUTFIT_NAMES = ["streetwear_full", "streetwear_inner", "nightwear", "underwear", "nude"];
+      const STANDING_MODES = ["spine", "static"];
+      const staticExpressionFallback = {
+        name: "exp_default",
+        face: "face_default",
+        mouth: "mouth_neutral",
+        eye: "eye_normal",
+        brow: "brow_normal"
+      };
+      let currentState = { ...DEFAULT_STATE };
+      let currentSystem = { ...DEFAULT_SYSTEM };
+      let expressionCache = null;
+      let fitHudValueRaf = 0;
 
       function clampNumber(value, min, max, fallback) {
         const next = Number(value);
         if (!Number.isFinite(next)) return fallback;
         return Math.max(min, Math.min(max, Math.round(next)));
       }
-
-      function deriveAffectionProfile(state) {
-        const affection = clampNumber(state && state.affection, 0, 255, 0);
+      function normalizeString(value, fallback) {
+        return typeof value === "string" && value.trim() ? value.trim() : fallback;
+      }
+      function pad2(value) {
+        return String(Math.max(0, Math.round(Number(value) || 0))).padStart(2, "0");
+      }
+      function normalizeSystem(value) {
+        const source = value && typeof value === "object" ? value : {};
+        const currentTime = source.current_time && typeof source.current_time === "object" ? source.current_time : {};
         return {
-          affection,
-          affectionTier: affection >= 200 ? 'high' : affection >= 80 ? 'mid' : 'low',
-          attachmentLevel: affection >= 140 ? 'heavy_attached' : affection >= 60 ? 'light_attached' : 'non_attached',
-          relationshipStage: affection >= 120 ? 'lover' : affection >= 80 ? 'friend' : 'neighbor'
+          ...DEFAULT_SYSTEM,
+          ...source,
+          current_time: {
+            ...DEFAULT_SYSTEM.current_time,
+            ...currentTime
+          }
         };
       }
-
+      function formatCurrentTime(system) {
+        const time = normalizeSystem(system).current_time;
+        const month = pad2(time.month);
+        const day = pad2(time.day);
+        const hour = pad2(time.hour);
+        const minute = pad2(time.minute);
+        const dayOfWeekMap = {
+          "周一": "MON",
+          "周二": "TUE",
+          "周三": "WED",
+          "周四": "THU",
+          "周五": "FRI",
+          "周六": "SAT",
+          "周日": "SUN",
+          "周天": "SUN"
+        };
+        const dow = dayOfWeekMap[time.day_of_week] || String(time.day_of_week || "").toUpperCase();
+        return `${month}.${day} ${hour}:${minute}${dow ? " " + dow : ""}`;
+      }
+      function normalizeStandingMode(value) {
+        return STANDING_MODES.includes(value) ? value : DEFAULT_STATE.standingMode;
+      }
+      function normalizeOutfit(value) {
+        return OUTFIT_NAMES.includes(value) ? value : DEFAULT_STATE.outfit;
+      }
+      function deriveFamiliarityProfile(state) {
+        const familiarity = state && typeof state.familiarity === "object" ? state.familiarity : {};
+        const coreStates = state && typeof state.coreStates === "object" ? state.coreStates : {};
+        const points = clampNumber(familiarity.points, 0, FAMILIARITY_MAX, 0);
+        return {
+          familiarityPoints: points,
+          familiarityTier: points >= FAMILIARITY_TIER_THRESHOLDS.high ? "high" : points >= FAMILIARITY_TIER_THRESHOLDS.mid ? "mid" : "low",
+          attachmentLevel: coreStates.attachmentLevel || "non_attached",
+          relationshipStage: coreStates.relationshipStage || "neighbor"
+        };
+      }
+      function fitHudValueNode(node) {
+        if (!node || !node.classList?.contains("text-value")) return;
+        node.title = node.textContent || "";
+        node.style.fontSize = "";
+        node.style.letterSpacing = "";
+        const sizes = [18, 17, 16, 15, 14, 13, 12, 11];
+        for (const size of sizes) {
+          node.style.fontSize = size + "px";
+          node.style.letterSpacing = size > 14 ? "1px" : size > 12 ? "0.4px" : "0";
+          if (node.scrollWidth <= node.clientWidth + 1) break;
+        }
+      }
+      function fitHudTextValues() {
+        if (fitHudValueRaf) cancelAnimationFrame(fitHudValueRaf);
+        fitHudValueRaf = requestAnimationFrame(() => {
+          fitHudValueRaf = 0;
+          document.querySelectorAll(".hud-ribbon-val.text-value").forEach(fitHudValueNode);
+        });
+      }
       function setText(name, value) {
-        document.querySelectorAll(`[data-dokuha-field="${name}"]`).forEach((node) => {
-          node.textContent = value;
-        });
+        document.querySelectorAll('[data-dokuha-field="' + name + '"]').forEach((node) => { node.textContent = value; });
+        fitHudTextValues();
       }
-
       function setBar(name, percent) {
-        document.querySelectorAll(`[data-dokuha-bar="${name}"]`).forEach((node) => {
-          node.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+        document.querySelectorAll('[data-dokuha-bar="' + name + '"]').forEach((node) => {
+          node.style.width = Math.max(0, Math.min(100, percent)) + "%";
         });
       }
-
       function applyState(state, profile) {
-        const nextState = state && typeof state === 'object' ? state : {};
-        const nextProfile = profile && typeof profile === 'object' ? profile : deriveAffectionProfile(nextState);
-        const energy = clampNumber(nextState.energy, 0, 100, 72);
-        const mood = clampNumber(nextState.mood, 0, 100, 68);
-        const affection = clampNumber(nextProfile.affection, 0, 255, 0);
-        const affectionPercent = Math.round((affection / 255) * 100);
-        const handle = typeof nextState.handle === 'string' && nextState.handle.trim() ? nextState.handle.trim() : 'LOSTRAB_722';
-        const location = typeof nextState.location === 'string' && nextState.location.trim() ? nextState.location.trim() : 'LOCAL HOST';
-        const hostName = typeof nextState.hostName === 'string' && nextState.hostName.trim() ? nextState.hostName.trim() : '狐坂 毒羽';
-        const tier = LABELS.affectionTier[nextProfile.affectionTier] || String(nextProfile.affectionTier || 'LOW').toUpperCase();
-        const relationship = LABELS.relationshipStage[nextProfile.relationshipStage] || String(nextProfile.relationshipStage || 'NEIGHBOR').toUpperCase();
-        const attachment = LABELS.attachmentLevel[nextProfile.attachmentLevel] || String(nextProfile.attachmentLevel || 'NON_ATTACHED').toUpperCase();
+        const nextState = state && typeof state === "object" ? state : {};
+        currentState = {
+          ...currentState,
+          ...nextState,
+          coreStates: { ...currentState.coreStates, ...(nextState.coreStates && typeof nextState.coreStates === "object" ? nextState.coreStates : {}) },
+          mentalStates: { ...currentState.mentalStates, ...(nextState.mentalStates && typeof nextState.mentalStates === "object" ? nextState.mentalStates : {}) }
+        };
+        const nextProfile = profile && typeof profile === "object" ? profile : deriveFamiliarityProfile(currentState);
+        const familiarityPoints = clampNumber(nextProfile.familiarityPoints, 0, FAMILIARITY_MAX, DEFAULT_STATE.familiarity.points);
+        const familiarityPercent = Math.round((familiarityPoints / FAMILIARITY_MAX) * 100);
+        const relationship = LABELS.relationshipStage[nextProfile.relationshipStage] || String(nextProfile.relationshipStage || "NEIGHBOR").toUpperCase();
+        const tier = LABELS.familiarityTier[nextProfile.familiarityTier] || String(nextProfile.familiarityTier || "LOW").toUpperCase();
+        const attachment = LABELS.attachmentLevel[nextProfile.attachmentLevel] || String(nextProfile.attachmentLevel || "NON_ATTACHED").toUpperCase();
+        const profileText = tier + " / " + relationship + " / " + attachment;
+        const mode = LABELS.mode[currentState.coreStates.mode] || String(currentState.coreStates.mode || "NORMAL").toUpperCase();
+        const dynamicEmotion = LABELS.dynamicEmotion[currentState.mentalStates.dynamicEmotion] || String(currentState.mentalStates.dynamicEmotion || "SLIGHTLY_COLD").toUpperCase();
+        const outfit = normalizeOutfit(normalizeString(currentState.outfit, DEFAULT_STATE.outfit));
+        const accessories = normalizeAccessories(currentState.accessories);
+        const accessoryText = accessories.length ? accessories.join("+") : "no_acc";
 
-        setText('energy', `${energy}%`);
-        setBar('energy', energy);
-        setText('mood', `${mood}%`);
-        setBar('mood', mood);
-        setText('affection', `${affection}/255`);
-        setBar('affection', affectionPercent);
-        setText('affection-profile', `${tier} / ${relationship} / ${attachment}`);
-        setText('identity', `ID: ${handle}\n${location}`);
-        setText('hostName', hostName);
-        setText('profileLine', `${handle} / ${location} / ${relationship}`);
+        setText("story-mode", mode);
+        setText("dynamic-emotion", dynamicEmotion);
+        setText("familiarity", String(familiarityPoints));
+        setBar("familiarity", familiarityPercent);
+        setText("familiarity-profile", profileText);
+        setText("identity", outfit + " / " + accessoryText);
+        setText("profileLine", relationship + " / " + tier + " / " + attachment);
+        setText("standing-mode", getStandingMode().toUpperCase());
+        setText("current-time", formatCurrentTime(currentSystem));
+      }
+      function applySystem(system) {
+        currentSystem = normalizeSystem(system);
+        setText("current-time", formatCurrentTime(currentSystem));
+      }
+      function getStandingMode() {
+        return normalizeStandingMode(window.DOKUHA_STANDING_MODE);
+      }
+      function updateStandingModeUrl(mode) {
+        const next = normalizeStandingMode(mode);
+        try {
+          const url = new URL(location.href);
+          url.searchParams.set("standingMode", next);
+          history.replaceState(null, "", url.href);
+        } catch (_) {}
+      }
+      function reloadForStandingMode(mode) {
+        const next = normalizeStandingMode(mode);
+        const url = new URL(location.href);
+        url.searchParams.set("standingMode", next);
+        location.replace(url.href);
+      }
+      function applyLocalStandingMode(mode) {
+        const next = normalizeStandingMode(mode);
+        window.DOKUHA_STANDING_MODE = next;
+        currentState = { ...currentState, standingMode: next };
+        try {
+          localStorage.setItem("dokuha.standingMode", next);
+        } catch (_) {}
+        updateStandingModeUrl(next);
+        setText("standing-mode", next.toUpperCase());
+      }
+      async function setStandingMode(mode) {
+        const next = normalizeStandingMode(mode);
+        const previous = getStandingMode();
+        applyLocalStandingMode(next);
+        applyState({ ...currentState, standingMode: next }, deriveFamiliarityProfile(currentState));
+        await renderStandingArt();
+
+        if (next === "spine" && previous !== "spine") {
+          reloadForStandingMode(next);
+        }
+      }
+      async function loadExpressions() {
+        if (expressionCache) return expressionCache;
+        try {
+          const response = await fetch(STATIC_BASE + "expression/exp.json", { cache: "no-store" });
+          const data = await response.json();
+          expressionCache = Array.isArray(data.expressions) ? data.expressions : [];
+        } catch (_) {
+          expressionCache = [];
+        }
+        return expressionCache;
+      }
+      function assetUrl(group, name) {
+        return STATIC_BASE + group + "/" + name + ".png";
+      }
+      function ensureLayerStack(mount) {
+        let stack = mount.querySelector("[data-dokuha-layer-stack]");
+        if (!stack) {
+          stack = document.createElement("div");
+          stack.className = "standing-layer-stack";
+          stack.dataset.dokuhaLayerStack = "1";
+          mount.prepend(stack);
+        }
+        return stack;
+      }
+      function removeSpineCanvas(mount) {
+        mount.querySelectorAll("canvas").forEach((canvas) => canvas.remove());
+      }
+      function removeStaticLayers(mount) {
+        mount.querySelector("[data-dokuha-layer-stack]")?.remove();
+      }
+      function addLayer(stack, group, name, kind) {
+        if (!name) return;
+        const image = document.createElement("img");
+        image.className = "static-layer static-layer--" + kind;
+        image.src = assetUrl(group, name);
+        image.alt = "";
+        image.decoding = "async";
+        image.loading = "eager";
+        image.draggable = false;
+        stack.append(image);
+      }
+      function getAutoOtherLayers(face) {
+        if (face === "face_pale") return ["ear_face_pale", "face_pale_up"];
+        if (face === "face_shadow") return ["face_shadow_up"];
+        return [];
+      }
+      async function renderStandingArt() {
+        const mount = document.getElementById("dokuha-spine");
+        if (!mount) return;
+        const standingMode = getStandingMode();
+        const requested = normalizeString(currentState.expression, DEFAULT_STATE.expression);
+        const outfit = normalizeOutfit(normalizeString(currentState.outfit, DEFAULT_STATE.outfit));
+        const accessories = normalizeAccessories(currentState.accessories);
+        mount.classList.toggle("spine-art", standingMode === "spine");
+        mount.classList.toggle("static-art", standingMode === "static");
+        mount.dataset.standingMode = standingMode;
+        mount.dataset.expression = requested;
+        mount.dataset.outfit = outfit;
+        mount.dataset.accessories = accessories.join(",");
+
+        if (standingMode !== "static") {
+          removeStaticLayers(mount);
+          return;
+        }
+
+        const expressions = await loadExpressions();
+        const expression = expressions.find((item) => item && item.name === requested) || staticExpressionFallback;
+        const autoOther = getAutoOtherLayers(expression.face);
+        const manualOther = Array.isArray(expression.other) ? expression.other : expression.other ? [expression.other] : [];
+        const other = [...new Set([
+          ...autoOther,
+          ...manualOther.filter((name) => !autoOther.includes(name) && !accessories.includes(name))
+        ])];
+        mount.dataset.expression = expression.name || requested;
+        removeSpineCanvas(mount);
+        const stack = ensureLayerStack(mount);
+        stack.replaceChildren();
+        addLayer(stack, "expression/face_fx", "face_default", "face");
+        if (expression.face && expression.face !== "face_default") addLayer(stack, "expression/face_fx", expression.face, "face");
+        addLayer(stack, "expression/mouth", expression.mouth || "mouth_neutral", "mouth");
+        addLayer(stack, "base", outfit, "base");
+        addLayer(stack, "expression/eyes", expression.eye || "eye_normal", "eye");
+        addLayer(stack, "expression/brow", expression.brow || "brow_normal", "brow");
+        other.forEach((name) => addLayer(stack, "expression/other", name, "other"));
+        accessories
+          .filter((name) => name !== "no_mask")
+          .forEach((name) => addLayer(stack, "expression/other", name, "accessory"));
       }
 
-      window.addEventListener('message', (event) => {
-        const data = event && event.data;
-        if (!data || data.type !== 'DOKUHA_STATE_PUSH') return;
-        applyState(data.state, data.affectionProfile);
+      document.querySelector('[data-dokuha-action="toggle-standing-mode"]')?.addEventListener("click", () => {
+        setStandingMode(getStandingMode() === "spine" ? "static" : "spine");
       });
 
+      window.addEventListener("message", (event) => {
+        const data = event && event.data;
+        if (!data || data.type !== "DOKUHA_STATE_PUSH") return;
+        const state = data.state;
+        applySystem(data.system || (state && state.system));
+        applyState(state, data.familiarityProfile || data.affectionProfile);
+        void renderStandingArt();
+      });
+
+      applySystem(DEFAULT_SYSTEM);
+      applyState(DEFAULT_STATE, deriveFamiliarityProfile(DEFAULT_STATE));
+      void renderStandingArt();
+      if (document.fonts?.ready) document.fonts.ready.then(fitHudTextValues).catch(() => {});
       try {
-        window.parent?.postMessage?.({ type: 'DOKUHA_STATUS_READY', appId: 'live-stream', reason: 'ready' }, '*');
+        window.parent?.postMessage?.({ type: "DOKUHA_STATUS_READY", appId: "live-stream", reason: "ready" }, "*");
       } catch (_) {}
     })();
   </script>

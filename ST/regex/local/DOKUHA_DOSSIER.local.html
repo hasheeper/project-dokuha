@@ -1,0 +1,772 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DOKUHA Text Block Local</title>
+  <style>
+    :root {
+      --dokuha-surface: var(--SmartThemeBlurTintColor, rgba(14, 14, 15, 0.92));
+      --dokuha-text: var(--SmartThemeBodyColor, rgba(242, 242, 242, 0.94));
+      --dokuha-story-text: rgba(232, 232, 232, 0.9);
+      --dokuha-strong-text: var(--SmartThemeEmColor, rgba(255, 255, 255, 0.98));
+      --dokuha-muted-text: var(--SmartThemeQuoteColor, rgba(210, 210, 210, 0.64));
+      --dokuha-divider: rgba(255, 255, 255, 0.12);
+      --dokuha-block-padding: 6px 8px;
+      --dokuha-body-leading: 1.5;
+      --dokuha-paragraph-gap: 0.98em;
+      --dokuha-dialogue-margin: 12px 0;
+      --dokuha-portrait-gap: 5px;
+      --dokuha-line-padding: 4px 0;
+      --dokuha-jp-leading: 1.16;
+      --dokuha-cn-leading: 1.24;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      overflow-x: hidden;
+      background: transparent;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      padding: 0;
+      color: var(--dokuha-text);
+    }
+
+    template {
+      display: none;
+    }
+
+    .highlighted-quote {
+      color: var(--dokuha-strong-text);
+      font-weight: 700;
+      font-style: normal;
+    }
+
+    .dokuha-text-block {
+      width: 100%;
+      margin: 0 auto;
+      padding: var(--dokuha-block-padding);
+      background: var(--dokuha-surface);
+      color: var(--dokuha-text);
+      font-size: 15px;
+    }
+
+    .dokuha-text-body {
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .dokuha-text-body > :first-child {
+      margin-top: 0;
+    }
+
+    .dokuha-text-body > :last-child {
+      margin-bottom: 0;
+    }
+
+    .dokuha-story-paragraph {
+      margin: var(--dokuha-paragraph-gap) 0;
+      color: var(--dokuha-story-text);
+      line-height: var(--dokuha-body-leading);
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .dokuha-dialogue-line {
+      display: block;
+      margin: var(--dokuha-dialogue-margin);
+      break-inside: avoid;
+    }
+
+    .dokuha-line-portrait {
+      width: min(250px, 72vw);
+      height: min(250px, 72vw);
+      aspect-ratio: 1 / 1;
+      margin: 0 0 var(--dokuha-portrait-gap);
+      position: relative;
+      overflow: hidden;
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 250, 253, 0.96), rgba(241, 236, 245, 0.93)),
+        #f8f1f6;
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+        0 8px 24px rgba(0, 0, 0, 0.18);
+      flex: 0 0 auto;
+    }
+
+    .dokuha-line-portrait__canvas {
+      position: absolute;
+      left: 48%;
+      top: 130%;
+      width: 200%;
+      height: auto;
+      max-width: none;
+      transform: translate(-50%, -50%);
+      display: block;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .dokuha-line-body {
+      min-width: 0;
+      padding: var(--dokuha-line-padding);
+      border-top: 1px solid var(--dokuha-divider);
+      border-bottom: 1px solid var(--dokuha-divider);
+    }
+
+    .dokuha-line-jp,
+    .dokuha-line-cn {
+      margin: 0;
+      white-space: pre-wrap;
+    }
+
+    .dokuha-line-jp {
+      color: var(--dokuha-muted-text);
+      font-size: 0.84em;
+      font-weight: 500;
+      line-height: var(--dokuha-jp-leading);
+    }
+
+    .dokuha-line-cn {
+      color: var(--dokuha-strong-text);
+      font-size: 1em;
+      font-weight: 700;
+      line-height: var(--dokuha-cn-leading);
+    }
+
+    @media (max-width: 520px) {
+      :root {
+        --dokuha-block-padding: 3px 4px;
+        --dokuha-body-leading: 1.44;
+        --dokuha-paragraph-gap: 0.86em;
+        --dokuha-dialogue-margin: 10px 0;
+        --dokuha-portrait-gap: 4px;
+        --dokuha-line-padding: 3px 0;
+        --dokuha-jp-leading: 1.12;
+        --dokuha-cn-leading: 1.2;
+      }
+
+      .dokuha-text-block {
+        font-size: 14px;
+      }
+
+      .dokuha-line-portrait {
+        width: min(190px, 72vw);
+        height: min(190px, 72vw);
+        border-radius: 16px;
+      }
+
+      .dokuha-line-jp {
+        font-size: 0.8em;
+      }
+
+      .dokuha-line-cn {
+        font-size: 0.98em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <template id="dokuha-content-source">$1</template>
+  <main class="dokuha-text-block" data-app-id="dokuha-text-block">
+    <div id="dokuha-text-main" class="dokuha-text-body"></div>
+  </main>
+
+  <script>
+    (function () {
+      const EXP_DATA = {"count":84,"expressions":[{"id":1,"name":"exp_default","face":"face_default","mouth":"mouth_neutral","eye":"eye_normal","brow":"brow_down"},{"id":2,"name":"exp_smile_soft","face":"face_default","mouth":"mouth_smile","eye":"eye_normal","brow":"brow_normal"},{"id":3,"name":"exp_serious","face":"face_default","mouth":"mouth_down_2","eye":"eye_normal","brow":"brow_up"},{"id":4,"name":"exp_glum","face":"face_default","mouth":"mouth_down_2","eye":"eye_normal","brow":"brow_down"},{"id":5,"name":"exp_cheerful","face":"face_default","mouth":"mouth_smile","eye":"eye_half_1","brow":"brow_up"},{"id":6,"name":"exp_huh","face":"face_default","mouth":"mouth_huh_1","eye":"eye_half_1","brow":"brow_normal"},{"id":7,"name":"exp_deflated","face":"face_default","mouth":"mouth_awawa","eye":"eye_half_3","brow":"brow_down"},{"id":8,"name":"exp_pout","face":"face_default","mouth":"mouth_pout","eye":"eye_half_4","brow":"brow_up"},{"id":9,"name":"exp_smirk","face":"face_default","mouth":"mouth_smirk","eye":"eye_half_4","brow":"brow_normal"},{"id":10,"name":"exp_smile_wry","face":"face_default","mouth":"mouth_smirk","eye":"eye_smile_2","brow":"brow_down","other":["sweat"]},{"id":11,"name":"exp_concerned","face":"face_default","mouth":"mouth_down_2","eye":"eye_normal","brow":"brow_down"},{"id":12,"name":"exp_pleading","face":"face_default","mouth":"mouth_huh_2","eye":"eye_half_3","brow":"brow_down"},{"id":13,"name":"exp_closed","face":"face_default","mouth":"mouth_neutral","eye":"eye_closed","brow":"brow_normal"},{"id":14,"name":"exp_playful","face":"face_default","mouth":"mouth_tongue","eye":"eye_smile_2","brow":"brow_normal"},{"id":15,"name":"exp_sparkle","face":"face_default","mouth":"mouth_blank_1","eye":"eye_star","brow":"brow_normal"},{"id":16,"name":"exp_surprised","face":"face_default","mouth":"mouth_huh_1","eye":"eye_wide_1","brow":"brow_normal","other":["sweat"]},{"id":17,"name":"exp_shocked_sad","face":"face_default","mouth":"mouth_huh_2","eye":"eye_wide_1","brow":"brow_down","other":["sweat"]},{"id":18,"name":"exp_panic","face":"face_default","mouth":"mouth_awawa","eye":"eye_wide_1","brow":"brow_down"},{"id":19,"name":"exp_smile_closed","face":"face_default","mouth":"mouth_smile","eye":"eye_smile_2","brow":"brow_normal"},{"id":20,"name":"exp_smile_twitch","face":"face_default","mouth":"mouth_smirk","eye":"eye_smile_2","brow":"brow_down","other":["sweat"]},{"id":21,"name":"exp_smile_hollow","face":"face_shadow","mouth":"mouth_smile","eye":"eye_half_3","brow":"brow_down"},{"id":22,"name":"exp_repulsed","face":"face_shadow","mouth":"mouth_gritting_teeth","eye":"eye_half_3","brow":"brow_down","other":["sweat"]},{"id":23,"name":"exp_craving","face":"face_default","mouth":"mouth_drool","eye":"eye_line","brow":"brow_normal"},{"id":24,"name":"exp_relieved","face":"face_default","mouth":"mouth_smile","eye":"eye_cry","brow":"brow_normal"},{"id":25,"name":"exp_sob","face":"face_default","mouth":"mouth_awawa","eye":"eye_cry","brow":"brow_down"},{"id":26,"name":"exp_cry_frustrated","face":"face_blush","mouth":"mouth_gritting_teeth","eye":"eye_cry","brow":"brow_up"},{"id":27,"name":"exp_tears_of_joy","face":"face_blush","mouth":"mouth_smile","eye":"eye_cry","brow":"brow_normal"},{"id":28,"name":"exp_xd_hyper","face":"face_default","mouth":"mouth_open","eye":"eye_xd","brow":"brow_up"},{"id":29,"name":"exp_xd_ouch","face":"face_default","mouth":"mouth_awawa","eye":"eye_xd","brow":"brow_down","other":["eye_tears_1"]},{"id":30,"name":"exp_xd_taunt","face":"face_default","mouth":"mouth_tongue","eye":"eye_xd","brow":"brow_up"},{"id":31,"name":"exp_xd_pout","face":"face_default","mouth":"mouth_pout","eye":"eye_xd","brow":"brow_up","other":["eye_tears_1"]},{"id":32,"name":"exp_dizzy","face":"face_default","mouth":"mouth_awawa","eye":"eye_dizzy","brow":"brow_down","other":["sweat"]},{"id":33,"name":"exp_craving_star","face":"face_default","mouth":"mouth_drool","eye":"eye_star","brow":"brow_up"},{"id":34,"name":"exp_jitome_deadpan","face":"face_default","mouth":"mouth_down_2","eye":"eye_jitome_1","brow":"brow_down"},{"id":35,"name":"exp_jitome_amused","face":"face_default","mouth":"mouth_smirk","eye":"eye_jitome_2","brow":"brow_normal"},{"id":36,"name":"exp_jitome_glare","face":"face_default","mouth":"mouth_pout","eye":"eye_jitome_1","brow":"brow_up"},{"id":37,"name":"exp_jitome_meh","face":"face_default","mouth":"mouth_huh_2","eye":"eye_jitome_2","brow":"brow_down"},{"id":38,"name":"exp_jitome_cringe","face":"face_default","mouth":"mouth_awawa","eye":"eye_jitome_1","brow":"brow_down"},{"id":39,"name":"exp_jitome_cheeky","face":"face_default","mouth":"mouth_smirk","eye":"eye_jitome_1","brow":"brow_normal"},{"id":40,"name":"exp_jitome_hopeless","face":"face_default","mouth":"mouth_down_2","eye":"eye_jitome_2","brow":"brow_down"},{"id":41,"name":"exp_laugh_lmao","face":"face_default","mouth":"mouth_open","eye":"eye_smile_1","brow":"brow_down"},{"id":42,"name":"exp_line_speechless","face":"face_default","mouth":"mouth_down_2","eye":"eye_line","brow":"brow_normal"},{"id":43,"name":"exp_line_purr","face":"face_default","mouth":"mouth_smile","eye":"eye_line","brow":"brow_normal"},{"id":44,"name":"exp_line_drool","face":"face_default","mouth":"mouth_drool","eye":"eye_line","brow":"brow_normal"},{"id":45,"name":"exp_peaceful_closed","face":"face_default","mouth":"mouth_smile","eye":"eye_closed","brow":"brow_normal"},{"id":46,"name":"exp_pain_closed","face":"face_default","mouth":"mouth_gritting_teeth","eye":"eye_closed","brow":"brow_down","other":["eye_tears_1"]},{"id":47,"name":"exp_confident_closed","face":"face_default","mouth":"mouth_smirk","eye":"eye_closed","brow":"brow_up"},{"id":48,"name":"exp_sigh_closed","face":"face_default","mouth":"mouth_huh_2","eye":"eye_closed","brow":"brow_down"},{"id":49,"name":"exp_pout_closed","face":"face_default","mouth":"mouth_pout","eye":"eye_closed","brow":"brow_up"},{"id":50,"name":"exp_skeptical","face":"face_default","mouth":"mouth_neutral","eye":"eye_half_4","brow":"brow_up"},{"id":51,"name":"exp_tch","face":"face_default","mouth":"mouth_gritting_teeth","eye":"eye_half_5","brow":"brow_up"},{"id":52,"name":"exp_dead_inside","face":"face_default","mouth":"mouth_huh_2","eye":"eye_socket","brow":"brow_down"},{"id":53,"name":"exp_nauseous","face":"face_pale","mouth":"mouth_gritting_teeth","eye":"eye_socket","brow":"brow_down","other":["ear_face_pale","sweat"]},{"id":54,"name":"exp_ghastly","face":"face_pale","mouth":"mouth_down_2","eye":"eye_socket","brow":"brow_down","other":["ear_face_pale"]},{"id":55,"name":"exp_shutdown","face":"face_shadow","mouth":"mouth_neutral","eye":"eye_jitome_2","brow":"brow_down"},{"id":56,"name":"exp_horrified","face":"face_shadow","mouth":"mouth_blank_2","eye":"eye_wide_2","brow":"brow_down"},{"id":57,"name":"exp_busted","face":"face_default","mouth":"mouth_smirk","eye":"eye_wide_1","brow":"brow_normal","other":["sweat"]},{"id":58,"name":"exp_enraged","face":"face_shadow","mouth":"mouth_gritting_teeth","eye":"eye_wide_1","brow":"brow_up"},{"id":59,"name":"exp_triggered","face":"face_shadow","mouth":"mouth_down_2","eye":"eye_wide_2","brow":"brow_up"},{"id":60,"name":"exp_blush_huh","face":"face_blush","mouth":"mouth_huh_1","eye":"eye_normal","brow":"brow_normal"},{"id":61,"name":"exp_blush_panic","face":"face_blush","mouth":"mouth_awawa","eye":"eye_wide_1","brow":"brow_normal","other":["sweat"]},{"id":62,"name":"exp_blush_overload","face":"face_blush","mouth":"mouth_awawa","eye":"eye_dizzy","brow":"brow_normal","other":["sweat"]},{"id":63,"name":"exp_blush_ouch","face":"face_blush","mouth":"mouth_blank_1","eye":"eye_xd","brow":"brow_up","other":["sweat"]},{"id":64,"name":"exp_blush_disgust","face":"face_blush","mouth":"mouth_awawa","eye":"eye_jitome_1","brow":"brow_down"},{"id":65,"name":"exp_blush_sob","face":"face_blush","mouth":"mouth_awawa","eye":"eye_cry","brow":"brow_down"},{"id":66,"name":"exp_blush_embarrassed","face":"face_blush","mouth":"mouth_awawa","eye":"eye_closed","brow":"brow_down","other":["sweat"]},{"id":67,"name":"exp_blush_awkward","face":"face_blush","mouth":"mouth_open","eye":"eye_smile_1","brow":"brow_down","other":["sweat"]},{"id":68,"name":"exp_blush_pain_closed","face":"face_blush","mouth":"mouth_gritting_teeth","eye":"eye_closed","brow":"brow_down","other":["sweat"]},{"id":69,"name":"exp_derp","face":"face_default","mouth":"mouth_drool","eye":"eye_half_3","brow":"brow_normal"},{"id":70,"name":"exp_sadistic","face":"face_shadow","mouth":"mouth_smirk","eye":"eye_half_4","brow":"brow_normal"},{"id":71,"name":"exp_sleep_neutral","face":"face_default","mouth":"mouth_neutral","eye":"eye_closed","brow":"brow_normal"},{"id":72,"name":"exp_sleep_peaceful","face":"face_default","mouth":"mouth_smile","eye":"eye_closed","brow":"brow_normal"},{"id":73,"name":"exp_sleep_drool","face":"face_default","mouth":"mouth_drool","eye":"eye_line","brow":"brow_normal"},{"id":74,"name":"exp_sleep_nightmare","face":"face_default","mouth":"mouth_gritting_teeth","eye":"eye_closed","brow":"brow_down","other":["sweat"]},{"id":75,"name":"exp_drowsy_yawn","face":"face_default","mouth":"mouth_huh_2","eye":"eye_half_2","brow":"brow_normal"},{"id":76,"name":"exp_drowsy_neutral","face":"face_default","mouth":"mouth_neutral","eye":"eye_half_2","brow":"brow_normal"},{"id":77,"name":"exp_drowsy_smile","face":"face_default","mouth":"mouth_smile","eye":"eye_half_2","brow":"brow_down"},{"id":78,"name":"exp_blush_drowsy","face":"face_blush","mouth":"mouth_huh_2","eye":"eye_half_2","brow":"brow_down"},{"id":79,"name":"exp_drowsy_pout","face":"face_default","mouth":"mouth_pout","eye":"eye_half_2","brow":"brow_up"},{"id":80,"name":"exp_drowsy_awawa","face":"face_default","mouth":"mouth_awawa","eye":"eye_half_2","brow":"brow_down"},{"id":81,"name":"exp_drowsy_huh","face":"face_default","mouth":"mouth_huh_1","eye":"eye_half_2","brow":"brow_down"},{"id":82,"name":"exp_cry_agony","face":"face_shadow","mouth":"mouth_gritting_teeth","eye":"eye_cry","brow":"brow_down"},{"id":83,"name":"exp_pathetic","face":"face_default","mouth":"mouth_awawa","eye":"eye_wide_1","brow":"brow_down"},{"id":84,"name":"exp_star_serious","face":"face_default","mouth":"mouth_down_1","eye":"eye_star","brow":"brow_up"}]};
+      const ASSET_REFS = {"base":["nightwear","nude","streetwear_full","streetwear_inner","underwear"],"face":["face_blush","face_default","face_pale","face_shadow"],"eye":["eye_closed","eye_cry","eye_dizzy","eye_half_1","eye_half_2","eye_half_3","eye_half_4","eye_half_5","eye_jitome_1","eye_jitome_2","eye_line","eye_normal","eye_smile_1","eye_smile_2","eye_socket","eye_star","eye_wide_1","eye_wide_2","eye_xd"],"mouth":["mouth_awawa","mouth_blank_1","mouth_blank_2","mouth_down_1","mouth_down_2","mouth_drool","mouth_gritting_teeth","mouth_huh_1","mouth_huh_2","mouth_neutral","mouth_open","mouth_pout","mouth_smile","mouth_smirk","mouth_tongue"],"brow":["brow_down","brow_normal","brow_up"],"other":["ear_face_pale","eye_tears_1","eye_tears_2","eye_tears_3","eye_tears_4","face_pale_up","face_shadow_up","headphones","mask_down","mask_up","sweat"]};
+      const STATIC_ASSET_BASE_URL = 'http://127.0.0.1:4173/dokuha-assets/standing';
+      const ASSET_BASE_URL = resolveAssetBaseUrl();
+      const DEFAULT_EXPRESSION = 'exp_default';
+      const DEFAULT_OUTFIT = 'streetwear_full';
+      const MASK_ACCESSORY_NAMES = ['no_mask', 'mask_up', 'mask_down'];
+      const STACKABLE_ACCESSORY_NAMES = ['headphones'];
+      const ACCESSORY_NAMES = MASK_ACCESSORY_NAMES.concat(STACKABLE_ACCESSORY_NAMES);
+      const CACHE_KEY = '__DOKUHA_EXP_IMAGE_CACHE__';
+      const main = document.getElementById('dokuha-text-main');
+      const contentSource = document.getElementById('dokuha-content-source');
+      const hostFrame = window.frameElement;
+      let currentOutfit = resolveOutfit(readInitialOutfit());
+      let currentAccessories = normalizeAccessories(readInitialAccessories());
+      let warmAllScheduled = false;
+
+      function readInitialOutfit() {
+        try {
+          const params = new URLSearchParams(location.search || '');
+          return params.get('outfit') || DEFAULT_OUTFIT;
+        } catch (_) {
+          return DEFAULT_OUTFIT;
+        }
+      }
+
+      function readInitialAccessories() {
+        try {
+          const params = new URLSearchParams(location.search || '');
+          const raw = [params.get('accessories'), params.get('accessory'), params.get('acc')].filter(Boolean).join(',');
+          const names = new Set(normalizeAccessories(raw));
+          ACCESSORY_NAMES.forEach(function (name) {
+            const value = params.get(name);
+            if (value === '1' || value === 'true' || value === 'on' || value === 'yes') names.add(name);
+          });
+          return Array.from(names);
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function normalizeExpressionText(value) {
+        return String(value || '')
+          .replace(/<\/?dokuha-exp>/gi, '')
+          .replace(/^[\"'`]+|[\"'`]+$/g, '')
+          .trim();
+      }
+
+      function canonicalizeExpressionName(value) {
+        return normalizeExpressionText(value)
+          .replace(/([a-z0-9])([A-Z])/g, function (_, left, right) {
+            return left + '_' + right;
+          })
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '_')
+          .replace(/^_+|_+$/g, '')
+          .replace(/^(exp_)+/, '');
+      }
+
+      function resolveExpression(value) {
+        const requested = normalizeExpressionText(value) || DEFAULT_EXPRESSION;
+        const byId = Number(requested);
+        if (Number.isFinite(byId)) {
+          return EXP_DATA.expressions.find(function (item) {
+            return item.id === Math.round(byId);
+          }) || defaultExpression();
+        }
+        const exact = EXP_DATA.expressions.find(function (item) {
+          return item.name === requested;
+        });
+        if (exact) return exact;
+        const canonical = canonicalizeExpressionName(requested);
+        return EXP_DATA.expressions.find(function (item) {
+          return canonicalizeExpressionName(item.name) === canonical;
+        }) || defaultExpression();
+      }
+
+      function defaultExpression() {
+        return EXP_DATA.expressions.find(function (item) {
+          return item.name === DEFAULT_EXPRESSION;
+        }) || EXP_DATA.expressions[0];
+      }
+
+      function resolveOutfit(value) {
+        const requested = String(value || DEFAULT_OUTFIT).trim() || DEFAULT_OUTFIT;
+        return ASSET_REFS.base.includes(requested) ? requested : DEFAULT_OUTFIT;
+      }
+
+      function normalizeAccessories(value) {
+        const raw = Array.isArray(value) ? value.join(',') : typeof value === 'string' ? value : '';
+        var maskState = 'no_mask';
+        var hasHeadphones = false;
+        raw.split(/[,| ]+/).forEach(function (name) {
+          if (MASK_ACCESSORY_NAMES.includes(name)) {
+            maskState = name;
+            return;
+          }
+          if (name === 'headphones' && ASSET_REFS.other.includes(name)) hasHeadphones = true;
+        });
+        return hasHeadphones ? [maskState, 'headphones'] : [maskState];
+      }
+
+      function getRenderableAccessories() {
+        return currentAccessories.filter(function (name) {
+          return name !== 'no_mask' && ASSET_REFS.other.includes(name);
+        });
+      }
+
+      function assetUrl(group, name) {
+        const folders = {
+          base: 'base',
+          face: 'expression/face_fx',
+          eye: 'expression/eyes',
+          mouth: 'expression/mouth',
+          brow: 'expression/brow',
+          other: 'expression/other'
+        };
+        return ASSET_BASE_URL.replace(/\/+$/, '') + '/' + folders[group] + '/' + encodeURIComponent(name) + '.png';
+      }
+
+      function readGlobalString(key) {
+        const targets = [window];
+        try { targets.push(window.parent); } catch (_) {}
+        try { targets.push(window.top); } catch (_) {}
+        for (const target of targets) {
+          try {
+            if (target && typeof target[key] === 'string' && target[key].trim()) return target[key].trim();
+          } catch (_) {}
+        }
+        return '';
+      }
+
+      function resolveAssetBaseUrl() {
+        const explicit = readGlobalString('DOKUHA_ASSET_BASE_URL');
+        if (explicit) return explicit.replace(/\/+$/, '');
+        const appBase = readGlobalString('DOKUHA_APP_BASE_URL');
+        if (appBase) return appBase.replace(/\/+$/, '') + '/dokuha-assets/standing';
+        return STATIC_ASSET_BASE_URL;
+      }
+
+      function getAutoOtherLayers(face) {
+        if (face === 'face_pale') return ['ear_face_pale', 'face_pale_up'];
+        if (face === 'face_shadow') return ['face_shadow_up'];
+        return [];
+      }
+
+      function unique(values) {
+        return Array.from(new Set(values.filter(Boolean)));
+      }
+
+      function getExpressionOtherNames(expression) {
+        const manualOther = Array.isArray(expression.other)
+          ? expression.other
+          : expression.other
+            ? [expression.other]
+            : [];
+        const autoOther = getAutoOtherLayers(expression.face);
+        return unique([
+          ...autoOther,
+          ...manualOther.filter(function (name) {
+            return !autoOther.includes(name) && !currentAccessories.includes(name);
+          })
+        ]).filter(function (name) {
+          return ASSET_REFS.other.includes(name);
+        });
+      }
+
+      function getCriticalUrls(expression, outfit) {
+        const urls = [
+          assetUrl('face', 'face_default'),
+          expression.face !== 'face_default' ? assetUrl('face', expression.face) : '',
+          assetUrl('mouth', expression.mouth || 'mouth_neutral'),
+          assetUrl('base', outfit || DEFAULT_OUTFIT),
+          assetUrl('eye', expression.eye || 'eye_normal'),
+          assetUrl('brow', expression.brow || 'brow_down')
+        ];
+        getExpressionOtherNames(expression).forEach(function (name) {
+          urls.push(assetUrl('other', name));
+        });
+        getRenderableAccessories().forEach(function (name) {
+          urls.push(assetUrl('other', name));
+        });
+        return urls.filter(Boolean);
+      }
+
+      function getAllAssetUrls() {
+        return [].concat(
+          ASSET_REFS.base.map(function (name) { return assetUrl('base', name); }),
+          ASSET_REFS.face.map(function (name) { return assetUrl('face', name); }),
+          ASSET_REFS.mouth.map(function (name) { return assetUrl('mouth', name); }),
+          ASSET_REFS.eye.map(function (name) { return assetUrl('eye', name); }),
+          ASSET_REFS.brow.map(function (name) { return assetUrl('brow', name); }),
+          ASSET_REFS.other.map(function (name) { return assetUrl('other', name); })
+        );
+      }
+
+      function getCacheRoot() {
+        const candidates = [window];
+        try { candidates.push(window.parent); } catch (_) {}
+        try { candidates.push(window.top); } catch (_) {}
+        for (const target of candidates) {
+          try {
+            if (target && target.Object) return target;
+          } catch (_) {}
+        }
+        return window;
+      }
+
+      function warmImageCache(urls) {
+        const root = getCacheRoot();
+        let cache;
+        try {
+          cache = root[CACHE_KEY] || (root[CACHE_KEY] = Object.create(null));
+        } catch (_) {
+          cache = window[CACHE_KEY] || (window[CACHE_KEY] = Object.create(null));
+        }
+
+        urls.forEach(function (url) {
+          if (!url || cache[url]) return;
+          const image = new Image();
+          cache[url] = { status: 'loading', image };
+          image.decoding = 'async';
+          try { image.fetchPriority = 'low'; } catch (_) {}
+          image.onload = function () { cache[url].status = 'ready'; };
+          image.onerror = function () { cache[url].status = 'error'; };
+          image.src = url;
+        });
+      }
+
+      function scheduleWarmAll() {
+        if (warmAllScheduled) return;
+        warmAllScheduled = true;
+        setTimeout(function () {
+          warmImageCache(getAllAssetUrls());
+        }, 250);
+      }
+
+      function makeLayer(src) {
+        return src ? { url: src } : null;
+      }
+
+      function resolveLayers(expression, outfit) {
+        return [
+          makeLayer(assetUrl('face', 'face_default')),
+          expression.face !== 'face_default' ? makeLayer(assetUrl('face', expression.face)) : null,
+          makeLayer(assetUrl('mouth', expression.mouth || 'mouth_neutral')),
+          makeLayer(assetUrl('base', outfit || DEFAULT_OUTFIT)),
+          makeLayer(assetUrl('eye', expression.eye || 'eye_normal')),
+          makeLayer(assetUrl('brow', expression.brow || 'brow_down')),
+          ...getExpressionOtherNames(expression).map(function (name) {
+            return makeLayer(assetUrl('other', name));
+          }),
+          ...getRenderableAccessories().map(function (name) {
+            return makeLayer(assetUrl('other', name));
+          })
+        ].filter(Boolean);
+      }
+
+      function createStandingCanvas(expression) {
+        const canvas = document.createElement('canvas');
+        canvas.className = 'dokuha-line-portrait__canvas';
+        canvas.width = 2048;
+        canvas.height = 2048;
+        canvas.setAttribute('aria-hidden', 'true');
+        canvas.dataset.layerCount = String(resolveLayers(expression, currentOutfit).length);
+        paintStandingCanvas(canvas, resolveLayers(expression, currentOutfit));
+        return canvas;
+      }
+
+      async function paintStandingCanvas(canvas, layers) {
+        const images = await Promise.all(layers.map(function (layer) {
+          return loadCanvasImage(layer.url);
+        }));
+        const drawableImages = images.filter(Boolean);
+        const firstImage = drawableImages[0];
+        const width = firstImage && firstImage.naturalWidth || 2048;
+        const height = firstImage && firstImage.naturalHeight || 2048;
+        const context = canvas.getContext('2d');
+        if (!context) return;
+
+        if (canvas.width !== width) canvas.width = width;
+        if (canvas.height !== height) canvas.height = height;
+
+        context.clearRect(0, 0, width, height);
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        drawableImages.forEach(function (image) {
+          context.drawImage(image, 0, 0, width, height);
+        });
+        canvas.dataset.rendered = 'true';
+        resizeHostFrame();
+      }
+
+      function loadCanvasImage(src) {
+        return new Promise(function (resolve) {
+          if (!src) {
+            resolve(null);
+            return;
+          }
+
+          let settled = false;
+          function done(image) {
+            if (settled) return;
+            settled = true;
+            resolve(image);
+          }
+
+          const image = new Image();
+          image.decoding = 'async';
+          image.loading = 'eager';
+          try { image.fetchPriority = 'high'; } catch (_) {}
+          image.onload = function () { done(image); };
+          image.onerror = function () { done(null); };
+          image.src = src;
+
+          if (image.complete && image.naturalWidth > 0) {
+            done(image);
+          }
+        });
+      }
+
+      function readElementText(root, selector) {
+        const node = root.querySelector(selector);
+        return node ? (node.textContent || '').trim() : '';
+      }
+
+      function createTextElement(tag, className, text) {
+        const element = document.createElement(tag);
+        element.className = className;
+        element.textContent = text;
+        return element;
+      }
+
+      function createDialogueLine(source) {
+        const expression = resolveExpression(readElementText(source, 'dokuha-exp'));
+        const jp = readElementText(source, 'jp');
+        const cn = readElementText(source, 'cn');
+        const fallbackText = (source.textContent || '').replace(/\s+/g, ' ').trim();
+        const row = document.createElement('section');
+        row.className = 'dokuha-dialogue-line';
+        row.dataset.expression = expression.name;
+        row.dataset.outfit = currentOutfit;
+        row.dataset.accessories = currentAccessories.join(',');
+        row.title = expression.name + ' / ' + currentOutfit;
+
+        const portrait = document.createElement('figure');
+        portrait.className = 'dokuha-line-portrait';
+        portrait.setAttribute('aria-label', 'DOKUHA ' + expression.name);
+        portrait.append(createStandingCanvas(expression));
+
+        const body = document.createElement('div');
+        body.className = 'dokuha-line-body';
+        if (jp) body.append(createTextElement('p', 'dokuha-line-jp', jp));
+        if (cn) body.append(createTextElement('p', 'dokuha-line-cn', cn));
+        if (!jp && !cn && fallbackText) body.append(createTextElement('p', 'dokuha-line-cn', fallbackText));
+
+        row.append(portrait, body);
+        warmImageCache(getCriticalUrls(expression, currentOutfit));
+        return row;
+      }
+
+      function isDialogueLineNode(node) {
+        return node &&
+          node.nodeType === Node.ELEMENT_NODE &&
+          node.classList &&
+          node.classList.contains('dokuha-dialogue-line');
+      }
+
+      function isStoryParagraphNode(node) {
+        return node &&
+          node.nodeType === Node.ELEMENT_NODE &&
+          node.classList &&
+          node.classList.contains('dokuha-story-paragraph');
+      }
+
+      function trimTrailingText(target) {
+        const previous = target.lastChild;
+        if (!previous || previous.nodeType !== Node.TEXT_NODE) return;
+        previous.nodeValue = (previous.nodeValue || '').replace(/\s+$/g, '');
+        if (!previous.nodeValue) target.removeChild(previous);
+      }
+
+      function trimTrailingParagraph(target) {
+        const previous = target.lastChild;
+        if (!isStoryParagraphNode(previous)) return;
+        const trimmed = (previous.textContent || '').replace(/\s+$/g, '');
+        if (!trimmed) {
+          target.removeChild(previous);
+          return;
+        }
+        previous.replaceChildren();
+        appendHighlightedQuotes(previous, trimmed);
+      }
+
+      function createStoryParagraph(text) {
+        const paragraph = document.createElement('p');
+        paragraph.className = 'dokuha-story-paragraph';
+        appendHighlightedQuotes(paragraph, text);
+        return paragraph;
+      }
+
+      function appendHighlightedQuotes(target, text) {
+        const source = String(text || '');
+        const quotePairs = {
+          '"': '"',
+          '“': '”',
+          '「': '」',
+          '『': '』'
+        };
+        let cursor = 0;
+        while (cursor < source.length) {
+          let nextStart = -1;
+          let nextOpen = '';
+          Object.keys(quotePairs).forEach(function (open) {
+            const index = source.indexOf(open, cursor);
+            if (index !== -1 && (nextStart === -1 || index < nextStart)) {
+              nextStart = index;
+              nextOpen = open;
+            }
+          });
+          if (nextStart === -1) {
+            target.append(document.createTextNode(source.slice(cursor)));
+            break;
+          }
+          if (nextStart > cursor) {
+            target.append(document.createTextNode(source.slice(cursor, nextStart)));
+          }
+          const close = quotePairs[nextOpen];
+          const nextEnd = source.indexOf(close, nextStart + nextOpen.length);
+          if (nextEnd === -1) {
+            target.append(document.createTextNode(source.slice(nextStart)));
+            break;
+          }
+          const highlight = document.createElement('span');
+          highlight.className = 'highlighted-quote';
+          highlight.textContent = source.slice(nextStart, nextEnd + close.length);
+          target.append(highlight);
+          cursor = nextEnd + close.length;
+        }
+      }
+
+      function appendStoryText(target, value) {
+        let text = String(value || '').replace(/\r\n?/g, '\n');
+        if (isDialogueLineNode(target.lastChild)) {
+          text = text.replace(/^\s+/g, '');
+        }
+        text
+          .split('\n')
+          .map(function (line) {
+            return line.replace(/\s+/g, ' ').trim();
+          })
+          .filter(Boolean)
+          .forEach(function (line) {
+            target.append(createStoryParagraph(line));
+          });
+      }
+
+      function appendStoryNode(node, target) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          appendStoryText(target, node.nodeValue || '');
+          return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+        const element = node;
+        const tag = element.tagName.toLowerCase();
+        if (tag === 'dokuha-line') {
+          trimTrailingText(target);
+          trimTrailingParagraph(target);
+          target.append(createDialogueLine(element));
+          return;
+        }
+        if (tag === 'exp-think' || tag === 'dokuha-exp') return;
+        if (tag === 'jp' || tag === 'cn') {
+          target.append(document.createTextNode(element.textContent || ''));
+          return;
+        }
+
+        const clone = document.createElement(tag === 'blockquote' ? 'blockquote' : 'span');
+        Array.from(element.childNodes).forEach(function (child) {
+          appendStoryNode(child, clone);
+        });
+        target.append(clone);
+      }
+
+      function renderContent() {
+        if (!main) return;
+        const fragment = document.createDocumentFragment();
+        const sourceNodes = contentSource ? Array.from(contentSource.content.childNodes) : [];
+        sourceNodes.forEach(function (node) {
+          appendStoryNode(node, fragment);
+        });
+        main.replaceChildren(fragment);
+        scheduleWarmAll();
+        resizeHostFrame();
+      }
+
+      function applyState(state) {
+        if (!state || typeof state !== 'object') return false;
+        const nextOutfit = resolveOutfit(state.outfit);
+        const nextAccessories = normalizeAccessories(state.accessories);
+        const outfitChanged = nextOutfit !== currentOutfit;
+        const accessoriesChanged = nextAccessories.join(',') !== currentAccessories.join(',');
+        if (!outfitChanged && !accessoriesChanged) return false;
+        currentOutfit = nextOutfit;
+        currentAccessories = nextAccessories;
+        renderContent();
+        return true;
+      }
+
+      function getHostTargets() {
+        const targets = [window];
+        try { targets.push(window.parent); } catch (_) {}
+        try { targets.push(window.top); } catch (_) {}
+        return targets.filter(Boolean);
+      }
+
+      async function requestDirectState() {
+        for (const target of getHostTargets()) {
+          try {
+            if (target.DOKUHAPlugin && typeof target.DOKUHAPlugin.loadState === 'function') {
+              const state = await target.DOKUHAPlugin.loadState({ persist: false });
+              if (applyState(state)) return true;
+            }
+          } catch (_) {}
+          try {
+            if (target.STBridge && target.STBridge.mvuz && typeof target.STBridge.mvuz.read === 'function') {
+              const state = await target.STBridge.mvuz.read('dokuha', { persist: false });
+              if (applyState(state)) return true;
+            }
+          } catch (_) {}
+        }
+        return false;
+      }
+
+      function requestHostState() {
+        getHostTargets().forEach(function (target) {
+          try {
+            if (target && typeof target.postMessage === 'function') {
+              target.postMessage({
+                type: 'DOKUHA_STATUS_REQUEST',
+                appId: 'text-block',
+                reason: 'textBlock'
+              }, '*');
+            }
+          } catch (_) {}
+        });
+        requestDirectState();
+      }
+
+      function resizeHostFrame() {
+        if (!hostFrame) return;
+        hostFrame.style.width = 'min(760px, 100%)';
+        hostFrame.style.maxWidth = '100%';
+        hostFrame.style.border = '0';
+        hostFrame.style.display = 'block';
+        hostFrame.style.background = 'transparent';
+        const height = Math.max(
+          document.documentElement.scrollHeight,
+          document.body ? document.body.scrollHeight : 0
+        );
+        if (height > 0) hostFrame.style.height = height + 'px';
+      }
+
+      renderContent();
+      requestHostState();
+      setTimeout(requestHostState, 250);
+      window.addEventListener('resize', resizeHostFrame);
+      window.addEventListener('message', function (event) {
+        const data = event && event.data;
+        if (!data || typeof data !== 'object') return;
+        if (data.type === 'DOKUHA_STATE_PUSH') {
+          applyState(data.state);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
+```

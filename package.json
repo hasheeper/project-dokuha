@@ -7,9 +7,12 @@
     "dev": "vite --host 127.0.0.1",
     "build:tools": "rm -rf .generated/tools && tsc -p tsconfig.tools.json",
     "build:st-bridge": "npm run build:tools && node .generated/tools/scripts/build-st-bridge.js",
+    "build:regex": "npm run build:tools && node .generated/tools/scripts/build-dokuha-exp-regex.js",
     "copy-static": "npm run build:tools && node .generated/tools/scripts/copy-static.js",
-    "build": "npm run build:st-bridge && vite build && node .generated/tools/scripts/copy-static.js",
+    "build": "npm run build:tools && node .generated/tools/scripts/build-st-bridge.js && node .generated/tools/scripts/build-dokuha-exp-regex.js && vite build && node .generated/tools/scripts/copy-static.js",
     "preview": "vite preview --host 127.0.0.1",
+    "local": "npm run build && npm run serve:local",
+    "host:local": "npm run serve:local",
     "serve:local": "node apps/st-bridge/scripts/serve-local.mjs --port 4173 --root .",
     "st:local": "npm run serve:local",
     "check": "tsc --noEmit && tsc -p tsconfig.st-bridge.json && tsc -p tsconfig.tools.json --noEmit"

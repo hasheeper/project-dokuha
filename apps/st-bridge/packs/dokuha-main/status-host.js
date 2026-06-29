@@ -47,6 +47,11 @@
     const TRIGGER_COLLAPSED_STORAGE_KEY = "dokuha.status.triggerCollapsed.v2";
     const DEFAULT_APP_BASE_URL = "https://hasheeper.github.io/project-dokuha";
     const DEFAULT_STATUS_PATH = "apps/live-stream/index.html";
+    const PATCHABLE_STATE_FIELDS = ["familiarity", "coreStates", "mentalStates", "outfit", "accessories", "current_location", "current_event"];
+    const VALID_MODES = ["normal", "tired_mode", "hell_mode"];
+    const VALID_DISORDERS = ["asd_active", "adhd_active", "bpd_active", "pmdd_active"];
+    const VALID_LONG_TERM_EMOTIONS = ["depressed", "exhausted", "normal", "comfortable", "irritated", "paralyzed"];
+    const VALID_DYNAMIC_EMOTIONS = ["normal", "warm", "passionate", "slightly_cold", "freezing_cold"];
     function getBridgeTargets() {
       const targets = [];
       pushTarget(targets, CURRENT_ROOT);
@@ -62,6 +67,10 @@
           pushTarget(targets, target.top);
         } catch (_) {
         }
+        try {
+          pushTarget(targets, target.DOKUHA_ST_API);
+        } catch (_) {
+        }
       });
       return targets;
     }
@@ -70,6 +79,19 @@
     }
     function isDisabled(value) {
       return value === false || value === "false" || value === "0" || value === 0;
+    }
+    function isPlainObject(value) {
+      return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+    }
+    function normalizeDisorderActive(value) {
+      const raw = Array.isArray(value) ? value : typeof value === "string" && value !== "none" ? value.split(/[,| ]+/) : [];
+      const result = [];
+      raw.forEach((item) => {
+        if (typeof item !== "string") return;
+        if (!VALID_DISORDERS.includes(item)) return;
+        if (!result.includes(item)) result.push(item);
+      });
+      return result;
     }
     function trimTrailingSlash(value) {
       return typeof value === "string" ? value.trim().replace(/\/+$/, "") : "";
@@ -83,15 +105,22 @@
       }
       return "";
     }
-    function deriveAffectionProfile(state) {
-      const derive = ROOT.DOKUHASchemaRuntime?.deriveAffectionProfile || CURRENT_ROOT.DOKUHASchemaRuntime?.deriveAffectionProfile;
+    function deriveFamiliarityProfile(state) {
+      const derive = ROOT.DOKUHASchemaRuntime?.deriveFamiliarityProfile || CURRENT_ROOT.DOKUHASchemaRuntime?.deriveFamiliarityProfile || ROOT.DOKUHASchemaRuntime?.deriveAffectionProfile || CURRENT_ROOT.DOKUHASchemaRuntime?.deriveAffectionProfile;
       if (typeof derive === "function") return derive(state);
-      const affection = Math.max(0, Math.min(255, Math.round(Number(state?.affection) || 0)));
+      const familiarity = isPlainObject(state?.familiarity) ? state.familiarity : {};
+      const coreStates = isPlainObject(state?.coreStates) ? state.coreStates : {};
+      const points = Math.max(0, Math.min(500, Math.round(Number(familiarity.points) || 0)));
       return {
-        affection,
-        affectionTier: affection >= 200 ? "high" : affection >= 80 ? "mid" : "low",
-        attachmentLevel: affection >= 140 ? "heavy_attached" : affection >= 60 ? "light_attached" : "non_attached",
-        relationshipStage: affection >= 120 ? "lover" : affection >= 80 ? "friend" : "neighbor"
+        familiarityPoints: points,
+        familiarityTier: points >= 250 ? "high" : points >= 100 ? "mid" : "low",
+        attachmentLevel: coreStates.attachmentLevel || "non_attached",
+        relationshipStage: coreStates.relationshipStage || "neighbor",
+        thresholds: {
+          relationship: { friend: 100, lover: 150 },
+          attachment: { light_attached: 75, heavy_attached: 175 },
+          tier: { mid: 100, high: 250 }
+        }
       };
     }
     function appendQueryParams(url, params = {}) {
@@ -125,19 +154,23 @@
       }
 
       @keyframes dokuhaStatusPulse {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(228, 124, 154, 0.25), 0 10px 24px rgba(45, 35, 50, 0.12); }
-        50% { box-shadow: 0 0 0 12px rgba(228, 124, 154, 0), 0 14px 28px rgba(45, 35, 50, 0.16); }
+        0%, 100% { box-shadow: 0 0 0 0 rgba(223, 69, 118, 0.22), 0 14px 28px rgba(0, 0, 0, 0.42); }
+        50% { box-shadow: 0 0 0 10px rgba(223, 69, 118, 0), 0 18px 34px rgba(0, 0, 0, 0.5); }
       }
 
       #${HOST_ID} {
         position: static !important;
         z-index: 2147483645 !important;
         pointer-events: none !important;
-        --text-main: #332d36;
-        --text-sub: #8d8592;
-        --frame-purple: #dfd1eb;
-        --dokuha-pink: #ea4571;
-        --bg-cream: #fdfcff;
+        --dokuha-bg: rgba(18, 14, 20, 0.92);
+        --dokuha-panel: rgba(22, 18, 25, 0.92);
+        --dokuha-panel-weak: rgba(28, 23, 31, 0.78);
+        --dokuha-border: rgba(83, 70, 90, 0.72);
+        --dokuha-pink: #df4576;
+        --dokuha-pink-hot: #ff5b93;
+        --dokuha-text: #f8f6f7;
+        --dokuha-muted: #8b8390;
+        --dokuha-shadow: rgba(0, 0, 0, 0.5);
       }
 
       #${TRIGGER_ID} {
@@ -146,10 +179,12 @@
         right: 20px !important;
         width: 68px;
         height: 68px;
-        background: var(--bg-cream);
-        border: 1.5px solid rgba(228, 124, 154, 0.4);
+        background:
+          linear-gradient(145deg, rgba(223, 69, 118, 0.16), transparent 58%),
+          var(--dokuha-panel);
+        border: 1.5px solid rgba(223, 69, 118, 0.42);
         border-radius: 18px;
-        color: var(--text-main);
+        color: var(--dokuha-text);
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -158,10 +193,12 @@
         overflow: visible;
         z-index: 2147483645 !important;
         pointer-events: auto !important;
-        box-shadow: 0 10px 24px rgba(45, 35, 50, 0.12), inset 0 0 0 2px #ffffff;
+        box-shadow: 0 14px 28px var(--dokuha-shadow), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
         animation: dokuhaStatusFloat 3.5s ease-in-out infinite, dokuhaStatusPulse 3.5s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
         font-family: "Nunito", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: transform 0.22s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
       }
 
       #${TRIGGER_ID}::before {
@@ -170,8 +207,11 @@
 
       #${TRIGGER_ID}:hover {
         transform: scale(1.06);
-        border-color: var(--dokuha-pink);
-        box-shadow: 0 14px 32px rgba(45, 35, 50, 0.16), inset 0 0 0 2px #ffffff;
+        border-color: rgba(255, 91, 147, 0.82);
+        background:
+          linear-gradient(145deg, rgba(223, 69, 118, 0.22), transparent 58%),
+          var(--dokuha-bg);
+        box-shadow: 0 18px 34px rgba(0, 0, 0, 0.56), 0 0 16px rgba(223, 69, 118, 0.22);
       }
 
       #${TRIGGER_ID} .dokuha-status-trigger-mark {
@@ -180,8 +220,8 @@
         width: 52px;
         height: 52px;
         border-radius: 12px;
-        background: #f8f6fa;
-        border: 1px dashed var(--frame-purple);
+        background: rgba(26, 22, 30, 0.92);
+        border: 1px dashed rgba(223, 69, 118, 0.42);
         transition: transform 0.25s ease;
       }
 
@@ -194,15 +234,16 @@
         font-size: 11px;
         line-height: 1.1;
         letter-spacing: 1px;
-        color: var(--text-main);
+        color: var(--dokuha-text);
         text-align: center;
+        text-shadow: 0 0 12px rgba(223, 69, 118, 0.22);
       }
 
       #${TRIGGER_ID} .dokuha-status-trigger-sub {
         display: block;
         margin-top: 2px;
         font-size: 8px;
-        color: var(--text-sub);
+        color: var(--dokuha-muted);
         letter-spacing: 1.5px;
       }
 
@@ -221,19 +262,19 @@
         width: 24px;
         height: 24px;
         background: var(--dokuha-pink);
-        border: 2px solid #ffffff;
+        border: 2px solid rgba(248, 246, 247, 0.82);
         border-radius: 50%;
         color: #ffffff;
         cursor: pointer;
         padding: 0;
         z-index: 2;
-        box-shadow: 0 4px 8px rgba(228, 124, 154, 0.35);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.42), 0 0 10px rgba(223, 69, 118, 0.34);
         transition: transform 0.2s ease, background 0.2s ease;
       }
 
       .dokuha-status-trigger-fold:hover {
         transform: translateY(-1px) scale(1.05);
-        background: #d66484;
+        background: var(--dokuha-pink-hot);
       }
 
       .dokuha-status-trigger-fold svg {
@@ -251,12 +292,12 @@
         width: 26px;
         height: 56px;
         border-radius: 12px 0 0 12px;
-        background: var(--bg-cream);
-        border: 1.5px solid rgba(228, 124, 154, 0.4);
+        background: var(--dokuha-panel);
+        border: 1.5px solid rgba(223, 69, 118, 0.42);
         border-right: none;
         opacity: 1;
         animation: none;
-        box-shadow: -4px 4px 14px rgba(45, 35, 50, 0.08);
+        box-shadow: -6px 8px 18px rgba(0, 0, 0, 0.4);
       }
 
       #${TRIGGER_ID}.${TRIGGER_COLLAPSED_CLASS}::before {
@@ -265,8 +306,8 @@
 
       #${TRIGGER_ID}.${TRIGGER_COLLAPSED_CLASS}:hover {
         transform: none;
-        background: #ffffff;
-        border-color: var(--dokuha-pink);
+        background: var(--dokuha-bg);
+        border-color: rgba(255, 91, 147, 0.84);
       }
 
       #${TRIGGER_ID}.${TRIGGER_COLLAPSED_CLASS} .dokuha-status-trigger-mark {
@@ -333,43 +374,47 @@
         align-items: center;
         justify-content: center;
         padding: 18px;
-        background: rgba(37, 31, 42, 0.42);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        background:
+          radial-gradient(circle at 50% 42%, rgba(223, 69, 118, 0.12), transparent 34%),
+          linear-gradient(180deg, rgba(18, 14, 20, 0.54), rgba(9, 7, 10, 0.72));
+        backdrop-filter: blur(6px) saturate(0.9);
+        -webkit-backdrop-filter: blur(6px) saturate(0.9);
         z-index: 2147483646 !important;
-        overflow: hidden;
+        overflow: visible;
         pointer-events: auto !important;
       }
 
       #${WRAPPER_ID} {
         position: relative;
         box-sizing: border-box;
-        width: min(480px, calc(100vw - 36px));
+        width: min(620px, calc(100vw - 12px));
         height: min(940px, calc(100vh - 36px));
         min-height: min(680px, calc(100vh - 36px));
+        overflow: visible;
       }
 
       #${IFRAME_ID} {
         box-sizing: border-box;
         width: 100%;
         height: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.62);
+        border: 0;
         display: block;
         background: transparent;
         pointer-events: auto;
-        border-radius: 24px;
-        overflow: hidden;
-        box-shadow: 0 28px 70px rgba(45, 35, 50, 0.32);
+        border-radius: 0;
+        overflow: visible;
+        box-shadow: none;
       }
 
       #${CLOSE_ID} {
         position: absolute;
-        top: -12px;
-        right: -12px;
+        top: 14px;
+        left: auto;
+        right: max(4px, calc((100% - 430px) / 2 - 22px));
         width: 42px;
         height: 42px;
         border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 0;
         background: rgba(41, 36, 45, 0.84);
         color: #fff;
         cursor: pointer;
@@ -377,7 +422,7 @@
         align-items: center;
         justify-content: center;
         padding: 0;
-        z-index: 2;
+        z-index: 5;
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         transition: transform 0.2s ease, background 0.2s ease;
@@ -401,11 +446,13 @@
       let trigger = null;
       let triggerFoldButton = null;
       let lastState = null;
+      let lastSystem = null;
       let lastReason = "";
       let frameReadOptions = { persist: false };
       let eventsBound = false;
       const inlineTargets = /* @__PURE__ */ new Map();
       const targetStates = /* @__PURE__ */ new Map();
+      const targetSystems = /* @__PURE__ */ new Map();
       const messageTargets = [];
       const timeoutHandles = /* @__PURE__ */ new Set();
       const cleanupCallbacks = [];
@@ -647,6 +694,138 @@
       function resolveReadOptions() {
         return { persist: false };
       }
+      function sanitizeStatePatch(value) {
+        const source = isPlainObject(value) ? value : {};
+        const patch = {};
+        PATCHABLE_STATE_FIELDS.forEach((field) => {
+          if (!(field in source)) return;
+          const next = source[field];
+          if (field === "familiarity") {
+            if (!isPlainObject(next)) return;
+            const points = Number(next.points);
+            if (Number.isFinite(points)) patch[field] = { points };
+            return;
+          }
+          if (field === "coreStates") {
+            if (!isPlainObject(next)) return;
+            const corePatch = {};
+            if (VALID_MODES.includes(next.mode)) corePatch.mode = next.mode;
+            if (next.relationshipStage === "neighbor" || next.relationshipStage === "friend" || next.relationshipStage === "lover") corePatch.relationshipStage = next.relationshipStage;
+            if (next.attachmentLevel === "non_attached" || next.attachmentLevel === "light_attached" || next.attachmentLevel === "heavy_attached") corePatch.attachmentLevel = next.attachmentLevel;
+            if (Object.keys(corePatch).length) patch[field] = corePatch;
+            return;
+          }
+          if (field === "mentalStates") {
+            if (!isPlainObject(next)) return;
+            const mentalPatch = {};
+            if ("disorderActive" in next) mentalPatch.disorderActive = normalizeDisorderActive(next.disorderActive);
+            if (VALID_LONG_TERM_EMOTIONS.includes(next.longTermEmotion)) mentalPatch.longTermEmotion = next.longTermEmotion;
+            if (VALID_DYNAMIC_EMOTIONS.includes(next.dynamicEmotion)) mentalPatch.dynamicEmotion = next.dynamicEmotion;
+            if (Object.keys(mentalPatch).length) patch[field] = mentalPatch;
+            return;
+          }
+          if (field === "accessories") {
+            if (Array.isArray(next)) patch[field] = next.filter((item) => typeof item === "string");
+            else if (typeof next === "string") patch[field] = next;
+            return;
+          }
+          if (field === "current_event") {
+            if (!isPlainObject(next)) return;
+            const eventPatch = {};
+            if (["none", "daily_event", "relationship_event", "dokuha_crisis_event", "pmdd_event", "bad_luck"].includes(next.type)) eventPatch.type = next.type;
+            if (typeof next.name === "string") eventPatch.name = next.name;
+            if (["none", "ongoing", "end"].includes(next.phase)) eventPatch.phase = next.phase;
+            if (typeof next.start_time === "string") eventPatch.start_time = next.start_time;
+            if (Object.keys(eventPatch).length) patch[field] = eventPatch;
+            return;
+          }
+          if (typeof next === "string") patch[field] = next;
+        });
+        return patch;
+      }
+      function postPatchResult(target, request, result) {
+        if (!isMessageTarget(target)) return false;
+        try {
+          target.postMessage({
+            type: "DOKUHA_STATE_PATCH_RESULT",
+            appId: "live-stream",
+            requestId: request?.requestId || "",
+            ok: Boolean(result?.ok),
+            error: result?.error || "",
+            state: result?.state || null,
+            familiarityProfile: result?.state ? deriveFamiliarityProfile(result.state) : null,
+            affectionProfile: result?.state ? deriveFamiliarityProfile(result.state) : null
+          }, "*");
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
+      function mergeStatePatch(draft, patch) {
+        const base = isPlainObject(draft) ? draft : {};
+        const next = { ...base, ...patch };
+        if (isPlainObject(patch.familiarity)) {
+          next.familiarity = {
+            ...isPlainObject(base.familiarity) ? base.familiarity : {},
+            ...patch.familiarity
+          };
+        }
+        if (isPlainObject(patch.coreStates)) {
+          next.coreStates = {
+            ...isPlainObject(base.coreStates) ? base.coreStates : {},
+            ...patch.coreStates
+          };
+        }
+        if (isPlainObject(patch.mentalStates)) {
+          next.mentalStates = {
+            ...isPlainObject(base.mentalStates) ? base.mentalStates : {},
+            ...patch.mentalStates
+          };
+        }
+        if (isPlainObject(patch.current_event)) {
+          next.current_event = {
+            ...isPlainObject(base.current_event) ? base.current_event : {},
+            ...patch.current_event
+          };
+        }
+        return next;
+      }
+      async function patchStateFromMessage(target, request) {
+        const patch = sanitizeStatePatch(request?.patch);
+        if (!Object.keys(patch).length) {
+          postPatchResult(target, request, { ok: false, error: "empty_or_invalid_patch" });
+          return false;
+        }
+        try {
+          let state = null;
+          if (typeof ROOT.STBridge?.mvuz?.patch === "function") {
+            state = await ROOT.STBridge.mvuz.patch("dokuha", (draft) => mergeStatePatch(draft, patch), { type: "message", reason: request?.reason || "statusPatch" });
+            try {
+              stateService?.notifyStateChanged?.(state);
+            } catch (_) {
+            }
+          } else if (typeof stateService?.patchState === "function") {
+            state = await stateService.patchState((draft) => mergeStatePatch(draft, patch), {
+              operationId: "state:status-ui",
+              reason: request?.reason || "statusPatch"
+            });
+          } else {
+            throw new Error("patch_api_unavailable");
+          }
+          lastState = state;
+          lastReason = request?.reason || "statusPatch";
+          targetStates.set(target, state);
+          postPatchResult(target, request, { ok: true, state });
+          postDirectState(target, lastReason, state);
+          void refreshStatus(lastReason);
+          return true;
+        } catch (error) {
+          const message = error && typeof error.message === "string" ? error.message : "patch_failed";
+          console.warn("[DOKUHA Status Host] patchState failed:", error);
+          postPatchResult(target, request, { ok: false, error: message });
+          return false;
+        }
+      }
       function registerInlineTarget(source, readOptions = {}) {
         if (!isMessageTarget(source)) return null;
         inlineTargets.set(source, readOptions);
@@ -677,9 +856,23 @@
         if (target === frame?.contentWindow) return frameReadOptions;
         return inlineTargets.get(target) || { persist: false };
       }
-      function postStateTo(target, reason, state) {
+      async function loadStatusContext(readOptions = {}) {
+        if (typeof stateService?.loadContext === "function") {
+          const context = await stateService.loadContext(readOptions || { persist: false });
+          return {
+            state: context?.dokuha || context?.state || null,
+            system: context?.system || null
+          };
+        }
+        return {
+          state: await stateService.loadState(readOptions || { persist: false }),
+          system: null
+        };
+      }
+      function postStateTo(target, reason, state, system = null) {
         if (disposed) return false;
         const nextState = state || lastState;
+        const nextSystem = system || lastSystem;
         if (!isMessageTarget(target) || !nextState) return false;
         try {
           target.postMessage({
@@ -687,7 +880,9 @@
             reason: reason || "refresh",
             floorKey: "",
             state: nextState,
-            affectionProfile: deriveAffectionProfile(nextState)
+            system: nextSystem,
+            familiarityProfile: deriveFamiliarityProfile(nextState),
+            affectionProfile: deriveFamiliarityProfile(nextState)
           }, "*");
           return true;
         } catch (_) {
@@ -702,33 +897,38 @@
         let sent = false;
         if (frame?.contentWindow && ready) {
           postContainerReady(frame.contentWindow);
-          sent = postStateTo(frame.contentWindow, reason, nextState) || sent;
+          sent = postStateTo(frame.contentWindow, reason, nextState, lastSystem) || sent;
         }
         inlineTargets.forEach((_, target) => {
           postContainerReadyTo(target);
           const cachedState = targetStates.get(target);
-          if (cachedState) sent = postStateTo(target, reason, cachedState) || sent;
+          const cachedSystem = targetSystems.get(target) || lastSystem;
+          if (cachedState) sent = postStateTo(target, reason, cachedState, cachedSystem) || sent;
         });
         return sent;
       }
-      function postDirectState(target, reason, state) {
+      function postDirectState(target, reason, state, system = null) {
         postContainerReadyTo(target);
-        return postStateTo(target, reason, state);
+        return postStateTo(target, reason, state, system);
       }
       async function refreshTarget(target, reason = "statusRequest", readOptions = readOptionsForTarget(target)) {
         if (disposed) return false;
         if (!isMessageTarget(target)) return false;
-        let state;
+        let context;
         try {
-          state = await stateService.loadState(readOptions || { persist: false });
+          context = await loadStatusContext(readOptions || { persist: false });
         } catch (error) {
           console.warn("[DOKUHA Status Host] loadState failed:", error);
           return false;
         }
+        const state = context.state;
+        const system = context.system;
         lastState = state;
+        lastSystem = system || lastSystem;
         lastReason = reason;
         targetStates.set(target, state);
-        return postDirectState(target, reason, state);
+        if (system) targetSystems.set(target, system);
+        return postDirectState(target, reason, state, system);
       }
       async function refreshStatus(reason = "refresh") {
         if (disposed) return false;
@@ -737,8 +937,11 @@
         if (frame?.contentWindow && ready) {
           try {
             frameReadOptions = resolveReadOptions();
-            const state = await stateService.loadState(frameReadOptions);
+            const context = await loadStatusContext(frameReadOptions);
+            const state = context.state;
+            const system = context.system;
             lastState = state;
+            lastSystem = system || lastSystem;
             lastReason = reason;
             sent = postState(reason, state) || sent;
           } catch (error) {
@@ -756,9 +959,23 @@
         if (!data || typeof data !== "object") return;
         const isReady = data.type === "DOKUHA_STATUS_READY" || data.type === "dokuha:app-ready";
         const isRequest = data.type === "DOKUHA_STATUS_REQUEST";
-        if (!isReady && !isRequest) return;
+        const isPatch = data.type === "DOKUHA_STATE_PATCH";
+        if (!isReady && !isRequest && !isPatch) return;
         const appId = typeof data.appId === "string" ? data.appId : data.app?.id;
         if (appId && appId !== "live-stream") return;
+        if (isPatch) {
+          if (event.source === frame?.contentWindow) {
+            ready = true;
+            postContainerReady();
+            void patchStateFromMessage(event.source, data);
+            return;
+          }
+          const readOptions2 = resolveReadOptions();
+          const target2 = registerInlineTarget(event.source, readOptions2);
+          if (!target2) return;
+          void patchStateFromMessage(target2, data);
+          return;
+        }
         if (event.source === frame?.contentWindow) {
           ready = true;
           postContainerReady();
@@ -852,6 +1069,7 @@
         });
         inlineTargets.clear();
         targetStates.clear();
+        targetSystems.clear();
         blankIframe(frame);
         removeExistingDom();
         host = null;
@@ -861,6 +1079,7 @@
         trigger = null;
         triggerFoldButton = null;
         lastState = null;
+        lastSystem = null;
         lastReason = "";
         eventsBound = false;
         clearUnloadExposure();

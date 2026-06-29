@@ -10,6 +10,15 @@
       "entry": "./apps/live-stream/index.html",
       "status": "active",
       "notes": "Standalone live stream interface hosted inside the DOKUHA app shell."
+    },
+    "layer-debug": {
+      "id": "layer-debug",
+      "name": "DOKUHA Layer Debug",
+      "type": "debug",
+      "container": "./index.html?app=layer-debug",
+      "entry": "./apps/layer-debug/index.html",
+      "status": "active",
+      "notes": "Expression and layer preview/debug tool for DOKUHA static standing assets."
     }
   }
 }

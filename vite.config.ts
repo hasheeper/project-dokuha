@@ -12,7 +12,8 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         appContainer: resolve(__dirname, 'containers/app.html'),
         tavernContainer: resolve(__dirname, 'containers/tavern.html'),
-        liveStream: resolve(__dirname, 'apps/live-stream/index.html')
+        liveStream: resolve(__dirname, 'apps/live-stream/index.html'),
+        layerDebug: resolve(__dirname, 'apps/layer-debug/index.html')
       }
     }
   }

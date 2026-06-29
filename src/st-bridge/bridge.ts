@@ -119,6 +119,7 @@ interface RegisteredBridgeSchema {
       try { pushWindowCandidate(candidates, candidate.parent); } catch (_) {}
       try { pushWindowCandidate(candidates, candidate.parent?.parent); } catch (_) {}
       try { pushWindowCandidate(candidates, candidate.top); } catch (_) {}
+      try { pushWindowCandidate(candidates, candidate.DOKUHA_ST_API); } catch (_) {}
     });
     return candidates;
   }
@@ -207,6 +208,9 @@ interface RegisteredBridgeSchema {
   function getBridgeTargets(): BridgeRoot[] {
     const targets: BridgeRoot[] = [];
     [ROOT, HOST_ROOT, API_ROOT, ...WINDOW_CANDIDATES].forEach((candidate) => pushWindowCandidate(targets, candidate));
+    Array.from(targets).forEach((target) => {
+      try { pushWindowCandidate(targets, target.DOKUHA_ST_API); } catch (_) {}
+    });
     return targets;
   }
 
@@ -271,6 +275,12 @@ interface RegisteredBridgeSchema {
     return typeof value === 'string' && value.trim() ? value.trim() : fallback;
   }
 
+  function normalizeBooleanFlag(value: unknown): boolean {
+    if (value === true || value === 1) return true;
+    const normalized = normalizeString(value, '').toLowerCase();
+    return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+  }
+
   function trimTrailingSlash(value: unknown): string {
     return typeof value === 'string' ? value.trim().replace(/\/+$/, '') : '';
   }
@@ -300,7 +310,23 @@ interface RegisteredBridgeSchema {
     }
   }
 
+  function readBridgeUrlFromStack(): string {
+    try {
+      const stack = String(new Error().stack || '');
+      const match = stack.match(/https?:\/\/[^\s)]+?\/bridge\.js(?:\?[^\s)]*)?/i);
+      if (!match) return '';
+      const value = match[0]
+        .replace(/:\d+:\d+$/g, '')
+        .replace(/:\d+$/g, '');
+      return isUsableBridgeUrl(value) ? value : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
   function getCurrentScriptUrl() {
+    const stackUrl = readBridgeUrlFromStack();
+    if (stackUrl) return stackUrl;
     try {
       const currentScript = document.currentScript as HTMLScriptElement | null;
       const currentScriptUrl = currentScript?.src;
@@ -325,7 +351,7 @@ interface RegisteredBridgeSchema {
     ? __DOKUHA_BRIDGE_BUILD_CACHE_KEY__
     : 'dev';
   const cacheBust = params.get('v') || params.get('cache') || normalizeString(getGlobalValue('ST_BRIDGE_CACHE_BUST')) || buildCacheKey;
-  const forceReload = params.get('force') === '1';
+  const forceReload = params.get('force') === '1' || normalizeBooleanFlag(getGlobalValue('ST_BRIDGE_FORCE_RELOAD'));
 
   function resolveBridgeProfile(): BridgeProfile {
     const env = normalizeEnv(
@@ -369,15 +395,25 @@ interface RegisteredBridgeSchema {
   }
 
   async function fetchJson(url) {
-    const response = await fetch(withCache(url), { cache: cacheBust ? 'reload' : 'no-cache' });
-    if (!response.ok) throw new Error(`HTTP ${response.status} while loading ${url}`);
-    return response.json();
+    try {
+      const response = await fetch(withCache(url), { cache: cacheBust ? 'reload' : 'no-cache' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to fetch ${withCache(url)}: ${reason}`);
+    }
   }
 
   async function fetchText(url) {
-    const response = await fetch(withCache(url), { cache: cacheBust ? 'reload' : 'no-cache' });
-    if (!response.ok) throw new Error(`HTTP ${response.status} while loading ${url}`);
-    return response.text();
+    try {
+      const response = await fetch(withCache(url), { cache: cacheBust ? 'reload' : 'no-cache' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.text();
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to fetch ${withCache(url)}: ${reason}`);
+    }
   }
 
   function getManifestUrl() {
@@ -600,7 +636,10 @@ interface RegisteredBridgeSchema {
 
   async function runClassicScript(url, scriptId) {
     const source = await fetchText(url);
-    (0, eval)(`${source}\n//# sourceURL=${url}`);
+    // Direct eval keeps JS-Slash-Runner's script scope in the lexical chain.
+    // That lets pack scripts resolve Runner APIs such as eventOn/injectPrompts,
+    // matching the tavern-script execution model.
+    eval(`${source}\n//# sourceURL=${url}`);
     return { id: scriptId, type: 'script', url };
   }
 
@@ -622,6 +661,13 @@ interface RegisteredBridgeSchema {
       try { target.__DOKUHA_ST_BRIDGE_LOADED__ = API_ROOT.__DOKUHA_ST_BRIDGE_LOADED__; } catch (_) {}
     });
     return API_ROOT.__DOKUHA_ST_BRIDGE_LOADED__;
+  }
+
+  function publishBridgeReady(ready: Promise<unknown>): Promise<unknown> {
+    getBridgeTargets().forEach((target) => {
+      try { target.__DOKUHA_ST_BRIDGE_READY__ = ready; } catch (_) {}
+    });
+    return ready;
   }
 
   async function main() {
@@ -685,5 +731,7 @@ interface RegisteredBridgeSchema {
     return state;
   }
 
-  await main();
+  const ready = main();
+  publishBridgeReady(ready);
+  await ready;
 })();

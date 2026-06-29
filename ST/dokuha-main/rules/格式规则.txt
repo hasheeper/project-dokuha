@@ -1,0 +1,56 @@
+<format_rule>
+【DOKUHA 台词与表情格式规则】
+
+1. 基础原则: 本规则负责正文中的台词与表情差分格式；变量更新由 `变量规则.txt` 负责。
+
+2. 正文外层结构
+- 整个正文使用一个完整的 `<content>...</content>` 包裹。
+- 叙事文本、动作描写、环境描写、所有 `<dokuha-line>` 都放在 `<content>` 内。
+- `<UpdateVariable>` 或 Skipping 按 `变量规则.txt` 在 `<content>` 结束后处理。
+
+3. DOKUHA 台词差分规则
+- 类似 AVG/GALGAME 的台词-差分富文本模式，用于“毒羽当前消息里的即时情绪”。
+- 每一段毒羽台词必须使用一个完整的 `<dokuha-line>...</dokuha-line>` 包裹。
+- 每个 `<dokuha-line>` 内必须有且只有一个 `<dokuha-exp>`。
+- 一条回复可以有多个 `<dokuha-line>`。
+- 如果连续台词的即时情绪变化明显，就拆成多个 `<dokuha-line>`。
+- `<dokuha-exp>` 表示当前台词差分；长期状态变量由 MVU JSONPatch 表达。
+
+4. 固定结构
+```xml
+<content>
+叙事文本。
+
+<dokuha-line>
+<jp>日本語原文</jp>
+<cn>中文翻译</cn>
+<exp-think>逐步分析这句台词的情绪、语气、潜台词、身体反应，并说明为什么选择该表情</exp-think>
+<dokuha-exp>表情key</dokuha-exp>
+</dokuha-line>
+
+叙事文本。
+</content>
+```
+
+5. 字段规则
+- `<jp>`：只写毒羽实际说出口的日文台词。
+- `<cn>`：写 `<jp>` 的中文翻译。
+- `<exp-think>`：逐步分析这句台词对应的即时情绪；需要包含表层情绪、隐藏情绪、语气强弱、是否害羞/生气/困倦/撒娇/认真、最终选择该表情的理由。
+- `<exp-think>` 用于选择当前台词差分。
+- `<dokuha-exp>`：写一个 DOKUHA 表情 key 或数字 ID。
+
+6. 示例
+```xml
+<content>
+她顿了顿，然后非常坦然地说：
+
+<dokuha-line>
+<jp>……できる。でも、やらなくて済むならそれが一番。</jp>
+<cn>……会。但是，能不修最好。</cn>
+<exp-think>表面很坦然，隐藏情绪是懒散和理直气壮地摆烂；语气低能量但带一点让人无语的挑衅，因此选择空洞又欠揍的微妙笑脸。</exp-think>
+<dokuha-exp>exp_smile_hollow</dokuha-exp>
+</dokuha-line>
+
+</content>
+```
+</format_rule>

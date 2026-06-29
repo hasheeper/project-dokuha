@@ -1,44 +1,219 @@
 (function() {
   "use strict";
-  const DOKUHA_STREAM_STATUSES = ["offline", "online", "brb", "ending"];
-  const DEFAULT_DOKUHA_STATE = {
-    affection: 0,
-    energy: 72,
-    mood: 68,
-    streamStatus: "online",
-    location: "LOCAL HOST",
-    nowPlaying: "Night Drive / 88%",
-    hostName: "狐坂 毒羽",
-    handle: "LOSTRAB_722",
-    statusComment: "连接稳定，直播协议保持在线。"
+  const DOKUHA_MODES = ["normal", "tired_mode", "hell_mode"];
+  const DOKUHA_DISORDERS = ["asd_active", "adhd_active", "bpd_active", "pmdd_active"];
+  const DOKUHA_LONG_TERM_EMOTIONS = ["depressed", "exhausted", "normal", "comfortable", "irritated", "paralyzed"];
+  const DOKUHA_DYNAMIC_EMOTIONS = ["normal", "warm", "passionate", "slightly_cold", "freezing_cold"];
+  const DOKUHA_OUTFITS = ["streetwear_full", "streetwear_inner", "nightwear", "underwear", "nude"];
+  const DOKUHA_MASK_STATES = ["no_mask", "mask_up", "mask_down"];
+  const DOKUHA_EVENT_TYPES = ["none", "daily_event", "relationship_event", "dokuha_crisis_event", "pmdd_event", "bad_luck"];
+  const DOKUHA_EVENT_PHASES = ["none", "ongoing", "end"];
+  const DOKUHA_FAMILIARITY_SCALE = 5;
+  const DOKUHA_FAMILIARITY_MAX = 500;
+  const DOKUHA_FAMILIARITY_TIER_THRESHOLDS = {
+    mid: 20 * DOKUHA_FAMILIARITY_SCALE,
+    high: 50 * DOKUHA_FAMILIARITY_SCALE
   };
+  const DEFAULT_DOKUHA_STATE = {
+    familiarity: {
+      points: 0,
+      tier: "low"
+    },
+    coreStates: {
+      mode: "normal",
+      relationshipStage: "neighbor",
+      attachmentLevel: "non_attached"
+    },
+    mentalStates: {
+      disorderActive: [],
+      longTermEmotion: "normal",
+      dynamicEmotion: "slightly_cold"
+    },
+    outfit: "streetwear_full",
+    accessories: ["no_mask"],
+    current_location: "ApartmentHallway",
+    current_event: {
+      type: "none",
+      name: "",
+      phase: "none",
+      start_time: ""
+    },
+    metadata: {
+      last_pmdd_time: null,
+      pmdd_cycle_anchor: "2026-06-29T20:00:00",
+      pmdd_followup_consumed: false
+    },
+    context_notes: {
+      event_summaries: [],
+      pending_event_summary: "",
+      pending_new_event_hint: false
+    }
+  };
+  function deriveFamiliarityTier(points) {
+    const safePoints = clampNumber(points, 0, DOKUHA_FAMILIARITY_MAX, DEFAULT_DOKUHA_STATE.familiarity.points);
+    if (safePoints >= DOKUHA_FAMILIARITY_TIER_THRESHOLDS.high) return "high";
+    if (safePoints >= DOKUHA_FAMILIARITY_TIER_THRESHOLDS.mid) return "mid";
+    return "low";
+  }
   function normalizeDokuhaState(value) {
-    const source = isRecord(value) ? value : {};
+    const source2 = isRecord(value) ? value : {};
+    const legacyCoreStates = isRecord(source2.core_states) ? source2.core_states : {};
+    const coreStates = isRecord(source2.coreStates) ? source2.coreStates : legacyCoreStates;
+    const legacyMentalStates = isRecord(source2.mental_states) ? source2.mental_states : {};
+    const mentalStates = isRecord(source2.mentalStates) ? source2.mentalStates : legacyMentalStates;
+    const familiarity = normalizeFamiliarity(source2);
     return {
-      affection: clampNumber(source.affection, 0, 255, DEFAULT_DOKUHA_STATE.affection),
-      energy: clampNumber(source.energy, 0, 100, DEFAULT_DOKUHA_STATE.energy),
-      mood: clampNumber(source.mood, 0, 100, DEFAULT_DOKUHA_STATE.mood),
-      streamStatus: normalizeStreamStatus(source.streamStatus, DEFAULT_DOKUHA_STATE.streamStatus),
-      location: normalizeString(source.location, DEFAULT_DOKUHA_STATE.location),
-      nowPlaying: normalizeString(source.nowPlaying, DEFAULT_DOKUHA_STATE.nowPlaying),
-      hostName: normalizeString(source.hostName, DEFAULT_DOKUHA_STATE.hostName),
-      handle: normalizeString(source.handle, DEFAULT_DOKUHA_STATE.handle),
-      statusComment: normalizeString(source.statusComment, DEFAULT_DOKUHA_STATE.statusComment)
+      familiarity,
+      coreStates: {
+        mode: normalizeChoice(
+          coreStates.mode,
+          DOKUHA_MODES,
+          DEFAULT_DOKUHA_STATE.coreStates.mode
+        ),
+        relationshipStage: normalizeChoice(
+          coreStates.relationshipStage ?? coreStates.relationship_stage,
+          ["neighbor", "friend", "lover"],
+          DEFAULT_DOKUHA_STATE.coreStates.relationshipStage
+        ),
+        attachmentLevel: normalizeChoice(
+          coreStates.attachmentLevel ?? coreStates.attachment_level,
+          ["non_attached", "light_attached", "heavy_attached"],
+          DEFAULT_DOKUHA_STATE.coreStates.attachmentLevel
+        )
+      },
+      mentalStates: {
+        disorderActive: normalizeDisorderActive(mentalStates.disorderActive ?? mentalStates.disorder_active),
+        longTermEmotion: normalizeChoice(
+          mentalStates.longTermEmotion ?? mentalStates.long_term_emotion,
+          DOKUHA_LONG_TERM_EMOTIONS,
+          DEFAULT_DOKUHA_STATE.mentalStates.longTermEmotion
+        ),
+        dynamicEmotion: normalizeChoice(
+          mentalStates.dynamicEmotion ?? mentalStates.dynamic_emotion,
+          DOKUHA_DYNAMIC_EMOTIONS,
+          DEFAULT_DOKUHA_STATE.mentalStates.dynamicEmotion
+        )
+      },
+      outfit: normalizeChoice(source2.outfit, DOKUHA_OUTFITS, DEFAULT_DOKUHA_STATE.outfit),
+      accessories: normalizeAccessories(source2.accessories),
+      current_location: normalizeNonEmptyString(
+        source2.current_location ?? source2.currentLocation,
+        DEFAULT_DOKUHA_STATE.current_location
+      ),
+      current_event: normalizeCurrentEvent(source2.current_event ?? source2.currentEvent),
+      metadata: normalizeMetadata(source2.metadata),
+      context_notes: normalizeContextNotes(source2.context_notes ?? source2.contextNotes)
+    };
+  }
+  function normalizeFamiliarity(source2) {
+    const rawFamiliarity = isRecord(source2.familiarity) ? source2.familiarity : {};
+    const rawPoints = rawFamiliarity.points ?? source2.familiarity_points ?? source2.affection;
+    const points = clampNumber(rawPoints, 0, DOKUHA_FAMILIARITY_MAX, DEFAULT_DOKUHA_STATE.familiarity.points);
+    return {
+      points,
+      tier: deriveFamiliarityTier(points)
     };
   }
   function isRecord(value) {
     return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  }
+  function normalizeNonEmptyString(value, fallback = "") {
+    return typeof value === "string" && value.trim() ? value.trim() : fallback;
+  }
+  function normalizeNullableString(value) {
+    return typeof value === "string" && value.trim() ? value.trim() : null;
+  }
+  function normalizeMetadata(value) {
+    const source2 = isRecord(value) ? value : {};
+    return {
+      last_pmdd_time: normalizeNullableString(source2.last_pmdd_time ?? source2.lastPMDDTime),
+      pmdd_cycle_anchor: normalizeNullableString(source2.pmdd_cycle_anchor ?? source2.pmddCycleAnchor) || DEFAULT_DOKUHA_STATE.metadata.pmdd_cycle_anchor,
+      pmdd_followup_consumed: source2.pmdd_followup_consumed === true || source2.pmddFollowupConsumed === true
+    };
+  }
+  function normalizeContextNotes(value) {
+    const source2 = isRecord(value) ? value : {};
+    const rawSummaries = Array.isArray(source2.event_summaries) ? source2.event_summaries : Array.isArray(source2.eventSummaries) ? source2.eventSummaries : [];
+    const eventSummaries = rawSummaries.map((item) => normalizeEventSummary(item)).filter((item) => Boolean(item)).slice(-6);
+    return {
+      event_summaries: eventSummaries,
+      pending_event_summary: sanitizeContextNote(source2.pending_event_summary ?? source2.pendingEventSummary),
+      pending_new_event_hint: source2.pending_new_event_hint === true || source2.pendingNewEventHint === true
+    };
+  }
+  function normalizeEventSummary(value) {
+    const source2 = isRecord(value) ? value : {};
+    const type = normalizeChoice(source2.type, DOKUHA_EVENT_TYPES, "daily_event");
+    const summary = sanitizeContextNote(source2.summary);
+    if (!summary) return null;
+    return {
+      id: normalizeNonEmptyString(source2.id, makeEventSummaryId(source2.name, type, source2.ended_at)),
+      type,
+      name: normalizeNonEmptyString(source2.name, "UnnamedEvent"),
+      ended_at: normalizeNonEmptyString(source2.ended_at ?? source2.endedAt, ""),
+      summary,
+      familiarity_points: clampNumber(source2.familiarity_points ?? source2.familiarityPoints, 0, DOKUHA_FAMILIARITY_MAX, 0),
+      relationship_stage: normalizeChoice(
+        source2.relationship_stage ?? source2.relationshipStage,
+        ["neighbor", "friend", "lover"],
+        DEFAULT_DOKUHA_STATE.coreStates.relationshipStage
+      ),
+      attachment_level: normalizeChoice(
+        source2.attachment_level ?? source2.attachmentLevel,
+        ["non_attached", "light_attached", "heavy_attached"],
+        DEFAULT_DOKUHA_STATE.coreStates.attachmentLevel
+      )
+    };
+  }
+  function sanitizeContextNote(value) {
+    if (typeof value !== "string") return "";
+    return value.replace(/[<>]/g, (char) => char === "<" ? "‹" : "›").replace(/\s+/g, " ").trim().slice(0, 420);
   }
   function clampNumber(value, min, max, fallback) {
     const next = Number(value);
     if (!Number.isFinite(next)) return fallback;
     return Math.max(min, Math.min(max, Math.round(next)));
   }
-  function normalizeString(value, fallback = "") {
-    return typeof value === "string" && value.trim() ? value.trim() : fallback;
+  function normalizeChoice(value, choices, fallback) {
+    return typeof value === "string" && choices.includes(value) ? value : fallback;
   }
-  function normalizeStreamStatus(value, fallback = DEFAULT_DOKUHA_STATE.streamStatus) {
-    return typeof value === "string" && DOKUHA_STREAM_STATUSES.includes(value) ? value : fallback;
+  function normalizeDisorderActive(value) {
+    const raw = Array.isArray(value) ? value : typeof value === "string" && value !== "none" ? value.split(/[,| ]+/) : [];
+    const result = [];
+    raw.forEach((item) => {
+      if (typeof item !== "string") return;
+      if (!DOKUHA_DISORDERS.includes(item)) return;
+      if (!result.includes(item)) result.push(item);
+    });
+    return result;
+  }
+  function normalizeAccessories(value) {
+    const raw = Array.isArray(value) ? value : typeof value === "string" ? value.split(/[,| ]+/) : [];
+    let maskState = "no_mask";
+    let hasHeadphones = false;
+    raw.forEach((item) => {
+      if (typeof item !== "string") return;
+      if (DOKUHA_MASK_STATES.includes(item)) {
+        maskState = item;
+        return;
+      }
+      if (item === "headphones") hasHeadphones = true;
+    });
+    return hasHeadphones ? [maskState, "headphones"] : [maskState];
+  }
+  function normalizeCurrentEvent(value) {
+    const source2 = isRecord(value) ? value : {};
+    const type = normalizeChoice(source2.type, DOKUHA_EVENT_TYPES, DEFAULT_DOKUHA_STATE.current_event.type);
+    const isNone = type === "none";
+    return {
+      type,
+      name: isNone ? "" : normalizeNonEmptyString(source2.name, DEFAULT_DOKUHA_STATE.current_event.name),
+      phase: isNone ? "none" : normalizeChoice(source2.phase, DOKUHA_EVENT_PHASES, DEFAULT_DOKUHA_STATE.current_event.phase),
+      start_time: isNone ? "" : normalizeNonEmptyString(source2.start_time ?? source2.startTime, "")
+    };
+  }
+  function makeEventSummaryId(name, type, endedAt) {
+    return [name, type, endedAt].map((item) => String(item || "").trim()).filter(Boolean).join(":").replace(/[^\w:.-]+/g, "-").slice(0, 120) || "event-summary";
   }
   function cloneJson(value, fallback) {
     if (value === void 0 || value === null) return fallback;
@@ -89,6 +264,10 @@
         }
         try {
           pushWindowCandidate(candidates, candidate.top);
+        } catch (_) {
+        }
+        try {
+          pushWindowCandidate(candidates, candidate.DOKUHA_ST_API);
         } catch (_) {
         }
       });
@@ -173,6 +352,12 @@
     function getBridgeTargets() {
       const targets = [];
       [ROOT, HOST_ROOT, API_ROOT, ...WINDOW_CANDIDATES].forEach((candidate) => pushWindowCandidate(targets, candidate));
+      Array.from(targets).forEach((target) => {
+        try {
+          pushWindowCandidate(targets, target.DOKUHA_ST_API);
+        } catch (_) {
+        }
+      });
       return targets;
     }
     function getGlobalValue(key) {
@@ -221,22 +406,27 @@
     function normalizeDokuhaState$1(value) {
       return normalizeDokuhaState(value);
     }
-    function normalizeString2(value, fallback = "") {
+    function normalizeString(value, fallback = "") {
       return typeof value === "string" && value.trim() ? value.trim() : fallback;
+    }
+    function normalizeBooleanFlag(value) {
+      if (value === true || value === 1) return true;
+      const normalized = normalizeString(value, "").toLowerCase();
+      return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
     }
     function trimTrailingSlash(value) {
       return typeof value === "string" ? value.trim().replace(/\/+$/, "") : "";
     }
-    function isLocalBridgeUrl(url) {
+    function isLocalBridgeUrl(url2) {
       try {
-        const hostname = String(url.hostname || "").toLowerCase();
+        const hostname = String(url2.hostname || "").toLowerCase();
         return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" || hostname === "::1";
       } catch (_) {
         return false;
       }
     }
     function normalizeEnv(value, fallback = "prod") {
-      const normalized = normalizeString2(value, "").toLowerCase();
+      const normalized = normalizeString(value, "").toLowerCase();
       if (normalized === "local" || normalized === "prod") return normalized;
       return fallback;
     }
@@ -249,7 +439,20 @@
         return false;
       }
     }
+    function readBridgeUrlFromStack() {
+      try {
+        const stack = String(new Error().stack || "");
+        const match = stack.match(/https?:\/\/[^\s)]+?\/bridge\.js(?:\?[^\s)]*)?/i);
+        if (!match) return "";
+        const value = match[0].replace(/:\d+:\d+$/g, "").replace(/:\d+$/g, "");
+        return isUsableBridgeUrl(value) ? value : "";
+      } catch (_) {
+        return "";
+      }
+    }
     function getCurrentScriptUrl() {
+      const stackUrl = readBridgeUrlFromStack();
+      if (stackUrl) return stackUrl;
       try {
         const currentScript = document.currentScript;
         const currentScriptUrl = currentScript?.src;
@@ -272,9 +475,9 @@
     const bridgeUrl = new URL(getCurrentScriptUrl());
     const bridgeRoot = new URL(".", bridgeUrl);
     const params = bridgeUrl.searchParams;
-    const buildCacheKey = "bca22865b3e4";
-    const cacheBust = params.get("v") || params.get("cache") || normalizeString2(getGlobalValue("ST_BRIDGE_CACHE_BUST")) || buildCacheKey;
-    const forceReload = params.get("force") === "1";
+    const buildCacheKey = "cbc6ac324326";
+    const cacheBust = params.get("v") || params.get("cache") || normalizeString(getGlobalValue("ST_BRIDGE_CACHE_BUST")) || buildCacheKey;
+    const forceReload = params.get("force") === "1" || normalizeBooleanFlag(getGlobalValue("ST_BRIDGE_FORCE_RELOAD"));
     function resolveBridgeProfile() {
       const env = normalizeEnv(
         params.get("env") || getGlobalValue("ST_BRIDGE_ENV"),
@@ -302,23 +505,33 @@
       cacheBust,
       forceReload
     });
-    function withCache(url) {
-      const next = new URL(url);
+    function withCache(url2) {
+      const next = new URL(url2);
       next.searchParams.set("_dokuha_bridge_v", cacheBust);
       return next.href;
     }
     function resolveUrl(path, base = bridgeRoot.href) {
       return new URL(path, base).href;
     }
-    async function fetchJson(url) {
-      const response = await fetch(withCache(url), { cache: "reload" });
-      if (!response.ok) throw new Error(`HTTP ${response.status} while loading ${url}`);
-      return response.json();
+    async function fetchJson(url2) {
+      try {
+        const response = await fetch(withCache(url2), { cache: cacheBust ? "reload" : "no-cache" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to fetch ${withCache(url2)}: ${reason}`);
+      }
     }
-    async function fetchText(url) {
-      const response = await fetch(withCache(url), { cache: "reload" });
-      if (!response.ok) throw new Error(`HTTP ${response.status} while loading ${url}`);
-      return response.text();
+    async function fetchText(url2) {
+      try {
+        const response = await fetch(withCache(url2), { cache: cacheBust ? "reload" : "no-cache" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to fetch ${withCache(url2)}: ${reason}`);
+      }
     }
     function getManifestUrl() {
       const explicit = params.get("manifest") || getGlobalValue("ST_BRIDGE_MANIFEST_URL");
@@ -532,22 +745,22 @@
     }
     async function runClassicScript(url, scriptId) {
       const source = await fetchText(url);
-      (0, eval)(`${source}
+      eval(`${source}
 //# sourceURL=${url}`);
       return { id: scriptId, type: "script", url };
     }
     async function loadScript(entry, manifestUrl) {
       const type = entry.type || "script";
-      const url = resolveUrl(entry.url, manifestUrl);
-      console.log(`${BRIDGE_NAME} loading ${entry.id || type}: ${url}`);
+      const url2 = resolveUrl(entry.url, manifestUrl);
+      console.log(`${BRIDGE_NAME} loading ${entry.id || type}: ${url2}`);
       if (type === "module") {
         await import(
           /* @vite-ignore */
-          withCache(url)
+          withCache(url2)
         );
-        return { id: entry.id, type, url };
+        return { id: entry.id, type, url: url2 };
       }
-      if (type === "script" || type === "classic") return runClassicScript(url, entry.id);
+      if (type === "script" || type === "classic") return runClassicScript(url2, entry.id);
       throw new Error(`Unsupported script type "${type}" for ${entry.id || entry.url}`);
     }
     function getLoadedRegistry() {
@@ -559,6 +772,15 @@
         }
       });
       return API_ROOT.__DOKUHA_ST_BRIDGE_LOADED__;
+    }
+    function publishBridgeReady(ready2) {
+      getBridgeTargets().forEach((target) => {
+        try {
+          target.__DOKUHA_ST_BRIDGE_READY__ = ready2;
+        } catch (_) {
+        }
+      });
+      return ready2;
     }
     async function main() {
       const manifestUrl = getManifestUrl();
@@ -616,6 +838,8 @@
       console.log(`${BRIDGE_NAME} loaded ${packId}`, state);
       return state;
     }
-    await main();
+    const ready = main();
+    publishBridgeReady(ready);
+    await ready;
   })();
 })();

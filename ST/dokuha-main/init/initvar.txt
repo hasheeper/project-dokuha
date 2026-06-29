@@ -1,0 +1,41 @@
+dokuha:
+  familiarity:
+    points: 0
+    tier: low
+  coreStates:
+    mode: normal
+    relationshipStage: neighbor
+    attachmentLevel: non_attached
+  mentalStates:
+    disorderActive: []
+    longTermEmotion: normal
+    dynamicEmotion: slightly_cold
+  outfit: streetwear_full
+  accessories: [no_mask]
+  current_location: ApartmentHallway
+  current_event:
+    type: none
+    name: ""
+    phase: none
+    start_time: ""
+  metadata:
+    last_pmdd_time: null
+    pmdd_cycle_anchor: "2026-06-29T20:00:00"
+    pmdd_followup_consumed: false
+  context_notes:
+    event_summaries: []
+    pending_event_summary: ""
+    pending_new_event_hint: false
+system:
+  current_time:
+    year: 2026
+    month: 6
+    day: 29
+    hour: 20
+    minute: 0
+    day_of_week: 周一
+  time_advance: null
+  time_set_to: null
+  event_start:
+    name: null
+    type: null

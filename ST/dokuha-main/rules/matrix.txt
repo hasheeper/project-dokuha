@@ -1,0 +1,121 @@
+<matrix>
+Outfits_Matrix:
+
+  # 👗 Main Outfits
+  streetwear_full: "Oversized light-colored jacket slipping off the shoulders, black T-shirt with a subtle gothic cross logo, very short black pleated skirt. Asymmetrical legwear: loose white bubble sock on the left, black-and-white striped thigh-high with a tight black thigh strap on the right. Chunky black platform boots, black fingerless gloves, and a leather choker with a silver cross. Hair in long twin tails."
+  streetwear_inner: "Black T-shirt with a subtle gothic cross logo, very short black pleated skirt. Asymmetrical legwear with a tight black thigh strap on the right leg. Chunky black platform boots, black fingerless gloves, and a leather choker. Jacket removed. Hair in long twin tails."
+
+  # 🛏️ Intimate & Casual
+  nightwear: "Plain, oversized white T-shirt worn loosely. Hair is completely let down and flowing freely, no twin tails."
+  underwear: "Minimalist black bralette / tube top and matching simple black panties. Hair in long twin tails."
+  nude: "Completely bare and flat. Hair tied up in her usual long twin tails."
+
+Accessories_Matrix:
+  # Mask state (choose exactly one)
+  no_mask: "No face mask is worn. This is the explicit empty mask state."
+  mask_up: "Standard black fabric face mask, worn properly covering the lower half of the face (nose and mouth)."
+  mask_down: "Standard black fabric face mask, pulled down and resting casually under the chin."
+
+  # Stackable add-ons
+  headphones: "Black cat-ear headphones worn over the head."
+Expressions_Matrix:
+
+  # 🟢 CATEGORY 1: Daily Basics & Subtle Reactions
+  exp_default: "Neutral, calm, blank face with lowered brows."
+  exp_smile_soft: "Gentle, warm, subtle smile."
+  exp_glum: "Slightly disappointed, dull, downcast frown."
+  exp_serious: "Stern, unamused, intense focus with angled brows."
+  exp_cheerful: "Bright, energetic, happy smile with raised brows."
+  exp_huh: "Skeptical, confused 'Wait, what?'. Slightly parted mouth, half-open eyes."
+  exp_deflated: "Defeated, exhausted, trembling awawa mouth, downward brows."
+  exp_concerned: "Quiet worry, lowered brows showing care."
+  exp_pleading: "Pleading, half-lidded puppy-like eyes and a weak parted mouth. Used when asking for help, acting pitiful, or trying to soften someone up."
+  exp_smile_closed: "Pure, wholesome, genuine closed-eye smile."
+  exp_playful: "Playful tongue-out tease with smiling eyes. Bratty, casual, and deliberately unserious."
+  exp_sparkle: "Starry-eyed fascination with a small stunned mouth. Mesmerized, tempted, or suddenly interested."
+  exp_craving: "Drooling, spaced-out, flat line eyes."
+  exp_relieved: "Relieved smile with teary eyes. 'Thank goodness'."
+
+  # 💥 CATEGORY 2: Comic, Derp & Slapstick Reactions
+  exp_surprised: "Mildly surprised, blank open mouth, wide eyes with sweatdrop."
+  exp_shocked_sad: "Heartbroken shock, disbelief, widened eyes with downward brows."
+  exp_panic: "Genuine panic, wide eyes, trembling awawa mouth."
+  exp_dizzy: "Dizzy spiraling eyes, panicked awawa mouth, sweating."
+  exp_derp: "Smooth brain, blank stare, drooling, half-open eyes."
+  exp_laugh_lmao: "Laughing out loud, mouth wide open, smiling eyes."
+  exp_xd_hyper: "Hyperactive, loud cheer, extreme joy (>A<)."
+  exp_xd_ouch: "Comic pain, awawa mouth, wincing (>A<) with tears."
+  exp_xd_taunt: "Bratty taunt, sticking tongue out, eyes closed (>x<)."
+  exp_xd_pout: "Childish stubborn pout (>^<) with tears."
+  exp_pathetic: "Wide eyes, trembling awawa mouth, downward brows. Pitiful and helpless."
+  exp_craving_star: "Starry-eyed, drooling, raised brows. Mesmerized and wanting."
+  exp_star_serious: "Serious downturned mouth, starry eyes, raised brows. Intensely focused."
+
+  # 🔵 CATEGORY 3: Deadpan, Smug & Judging (Jitome vibes)
+  exp_jitome_deadpan: "Flat stare, judging, deadpan, unimpressed."
+  exp_jitome_amused: "Amused half-stare with a smirk. Enjoying the situation."
+  exp_jitome_glare: "Fierce glare with a pout. Deeply offended or annoyed."
+  exp_jitome_meh: "Lazy, unmotivated, parted lips, deadpan eyes."
+  exp_jitome_cringe: "Physical cringe, trembling awawa mouth, judging heavily."
+  exp_jitome_cheeky: "Cheeky smirk, teasing half-stare."
+  exp_jitome_hopeless: "Deep sigh of disappointment, downcast deadpan stare."
+  exp_pout: "Stubborn pout with half-open eyes and raised brows."
+  exp_smirk: "Smug, knowing smirk, half-open eyes."
+  exp_smile_wry: "Wry, tired smile with sweatdrop. 'Can't help it'."
+  exp_smile_twitch: "Twitching smile, hiding annoyance, with sweatdrop."
+  exp_skeptical: "Skeptical half-stare, neutral mouth, raised evaluating brows."
+  exp_tch: "Gritting teeth, half-closed eyes, raised brows. Visibly annoyed."
+
+  # 🟡 CATEGORY 4: Eyes-Closed & Line Eyes Tactics
+  exp_line_speechless: "Completely done, flatline eyes (-_-), frowning."
+  exp_line_purr: "Deeply comfortable, purring smile (-w-)."
+  exp_line_drool: "Dozing off lazily or drooling (-_-;)."
+  exp_closed: "Simply resting eyes, neutral mouth."
+  exp_peaceful_closed: "Angelic, peaceful smile, eyes shut."
+  exp_pain_closed: "Enduring pain, gritting teeth with eyes shut tight and tears."
+  exp_confident_closed: "Smug, confident closed-eye smirk with raised brows."
+  exp_sigh_closed: "Sighing with parted lips, closed eyes, downward brows."
+  exp_pout_closed: "Turning head away in anger, pouting, eyes shut tight."
+
+  # 💤 CATEGORY 5: Sleep & Drowsy Universe
+  exp_sleep_neutral: "Sleeping quietly, neutral mouth, closed eyes."
+  exp_sleep_peaceful: "Peacefully sleeping with a soft smile."
+  exp_sleep_drool: "Deep lazy sleep, drooling."
+  exp_sleep_nightmare: "Uncomfortable nightmare, gritting teeth, closed eyes, sweating."
+  exp_drowsy_yawn: "Big loud yawn with sleepy half-open eyes."
+  exp_drowsy_neutral: "Eyes half-open, neutral mouth. Groggily fighting sleep."
+  exp_drowsy_smile: "Sleepy soft smile with half-open eyes."
+  exp_drowsy_pout: "Sleepy but annoyed, pouting mouth, half-open eyes."
+  exp_drowsy_awawa: "Sleepy half-open eyes with a trembling wavy mouth."
+  exp_drowsy_huh: "Dazed and sleepy, slightly parted mouth, half-open eyes."
+
+  # 🔴 CATEGORY 6: Blush, Panics & Embarrassment
+  exp_blush_huh: "Subtle blush, slightly surprised open mouth."
+  exp_blush_panic: "Flustered panic, wide eyes, trembling awawa mouth, sweating."
+  exp_blush_overload: "Overheated, dizzy eyes, trembling awawa mouth, sweating."
+  exp_blush_ouch: "Blushing comic pain, wincing (>x<) with sweatdrop."
+  exp_blush_disgust: "Deeply embarrassed but acting disgusted, deadpan eyes, awawa mouth."
+  exp_blush_sob: "Crying loudly from sheer embarrassment, awawa mouth."
+  exp_blush_embarrassed: "Hiding face, extreme shame, eyes squeezed shut, awawa mouth, sweating."
+  exp_blush_awkward: "Forced awkward open-mouth smile, downward brows, sweating."
+  exp_blush_pain_closed: "Pained blush, gritting teeth, eyes shut tight, sweating."
+  exp_blush_drowsy: "Flushed red cheeks, sleepy half-open eyes, parted lips."
+
+  # ⚫ CATEGORY 7: Drama, Dark Mode & Extreme States
+  exp_sob: "Quiet sobbing, shivering awawa mouth, downward brows."
+  exp_cry_frustrated: "Tears of frustration, gritting teeth, flushed face, fierce brows."
+  exp_tears_of_joy: "Crying from overwhelming happiness, flushed smiling face."
+  exp_cry_agony: "Shadowed face, gritting teeth, tears flowing, downward brows. Severe pain."
+  exp_dead_inside: "Dark eye sockets, slightly parted mouth. Completely exhausted/zombie state."
+  exp_nauseous: "Pale face, gritting teeth, dark sockets, sweating. Physically sick."
+  exp_ghastly: "Pale face, dark sockets, downcast mouth. Doomed or ghost-like."
+  exp_shutdown: "Shadowed face, deadpan eyes, neutral mouth. Completely shut down."
+  exp_horrified: "Shadowed face, wide eyes, blank gaping mouth. Paralyzed with horror."
+  exp_busted: "Wide eyes, smirk, sweatdrop. Caught red-handed, faking composure."
+  exp_enraged: "Shadowed face, gritting teeth, wide eyes, raised brows. Utterly furious."
+  exp_triggered: "Shadowed face, small pupils, downturned mouth. Deeply disgusted."
+  exp_sadistic: "Shadowed face, sadistic smirk, half-open eyes. Looking down on someone."
+  exp_smile_hollow: "Dead eyes, shadowed face, broken and empty smile."
+  exp_repulsed: "Shadowed face, extreme physical disgust, gritting teeth with sweatdrop."
+
+</matrix>

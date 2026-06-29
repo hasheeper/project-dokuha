@@ -4,34 +4,41 @@ Stable SillyTavern entry for Project DOKUHA packs.
 
 ## Load
 
-Production script:
+Production loader:
 
 ```js
-window.ST_BRIDGE_PACK = 'dokuha-main';
-window.ST_BRIDGE_ENV = 'prod';
-window.ST_BRIDGE_URL = 'https://hasheeper.github.io/project-dokuha/apps/st-bridge/bridge.js';
-import 'https://hasheeper.github.io/project-dokuha/apps/st-bridge/bridge.js?env=prod';
+await import('https://hasheeper.github.io/project-dokuha/apps/st-bridge/dokuha-bridge-loader.js?env=prod&force=1&v=dokuha-prod-9');
 ```
 
 Local testing:
 
 ```sh
-npm run build:st-bridge
-npm run serve:local
+npm run local
 ```
 
 ```js
-window.ST_BRIDGE_PACK = 'dokuha-main';
-window.ST_BRIDGE_ENV = 'local';
-window.DOKUHA_APP_BASE_URL = 'http://127.0.0.1:4173';
-window.ST_BRIDGE_URL = 'http://127.0.0.1:4173/apps/st-bridge/bridge.js';
-import 'http://127.0.0.1:4173/apps/st-bridge/bridge.js?env=local&appBase=http%3A%2F%2F127.0.0.1%3A4173&force=1&v=dev';
+await import('http://127.0.0.1:4173/apps/st-bridge/dokuha-bridge-loader.js?env=local&force=1&v=dokuha-local-10');
 ```
 
-If 4173 is busy, `serve:local` tries the next port and prints a bridge URL with
-the matching `appBase` parameter.
+Compact local snippet:
 
-The local host also accepts GitHub Pages-style paths, for example:
+```js
+await import('http://127.0.0.1:4173/apps/st-bridge/snippets/dokuha-local.js?v=dokuha-local-10');
+```
+
+Expression regex wrapper:
+
+- Cloud: `ST/regex/DOKUHA_EXP.html`
+- Local: `ST/regex/local/DOKUHA_EXP.local.html`
+
+If 4173 is busy, `serve:local` tries the next port and prints a ready-to-copy
+snippet with the matching `appBase` parameter.
+
+The loader exposes `window.DOKUHA_ST_API`, runs non-destructive `initvar`, binds
+`[initvar]` / `[dokuha:initvar]`, and starts the floating status trigger.
+
+The local host also accepts GitHub Pages-style bridge asset paths for debugging,
+for example:
 
 ```text
 http://127.0.0.1:4173/project-dokuha/apps/st-bridge/bridge.js?env=local&force=1&v=dev

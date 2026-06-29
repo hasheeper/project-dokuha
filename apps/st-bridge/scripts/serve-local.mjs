@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 4173;
-const PROJECT_PREFIX = '/project-dokuha';
+const PROJECT_PREFIX = 'project-dokuha';
+const LOCAL_CACHE_KEY = 'dokuha-local-10';
 
 function readArg(name, fallback = '') {
   const index = process.argv.indexOf(`--${name}`);
@@ -53,21 +54,73 @@ function writeCorsHeaders(res, extra = {}) {
   });
 }
 
+function stripProjectPrefix(decodedPath) {
+  if (decodedPath === `/${PROJECT_PREFIX}`) return '/';
+  if (decodedPath.startsWith(`/${PROJECT_PREFIX}/`)) {
+    return decodedPath.slice(PROJECT_PREFIX.length + 1) || '/';
+  }
+  return decodedPath;
+}
+
+function isInside(baseDir, filePath) {
+  return filePath === baseDir || filePath.startsWith(baseDir + path.sep);
+}
+
+function makeCandidate(baseDir, relativePath) {
+  const filePath = path.resolve(baseDir, relativePath);
+  if (!isInside(baseDir, filePath)) return null;
+  return filePath;
+}
+
+function addCandidate(candidates, baseDir, relativePath) {
+  const filePath = makeCandidate(baseDir, relativePath);
+  if (filePath && !candidates.includes(filePath)) candidates.push(filePath);
+}
+
+function buildCandidates(rootDir, requestPath) {
+  const distDir = path.join(rootDir, 'dist');
+  const normalizedPath = stripProjectPrefix(requestPath).replace(/^\/+/, '') || 'index.html';
+  const candidates = [];
+
+  if (normalizedPath.startsWith('apps/st-bridge/')) {
+    addCandidate(candidates, rootDir, normalizedPath);
+    addCandidate(candidates, distDir, normalizedPath);
+  }
+
+  if (
+    normalizedPath === 'index.html' ||
+    normalizedPath.startsWith('apps/') ||
+    normalizedPath.startsWith('containers/') ||
+    normalizedPath.startsWith('assets/')
+  ) {
+    addCandidate(candidates, distDir, normalizedPath);
+  }
+
+  if (normalizedPath.startsWith('dokuha-assets/standing/')) {
+    addCandidate(candidates, distDir, normalizedPath);
+    addCandidate(
+      candidates,
+      rootDir,
+      normalizedPath.replace(/^dokuha-assets\/standing\//, 'src/assets/png/standing/')
+    );
+  }
+
+  addCandidate(candidates, rootDir, normalizedPath);
+  addCandidate(candidates, distDir, normalizedPath);
+  return candidates;
+}
+
 async function resolveFilePath(rootDir, requestUrl) {
   const url = new URL(requestUrl || '/', 'http://127.0.0.1');
   const decodedPath = decodeURIComponent(url.pathname || '/');
-  const candidates = [decodedPath];
-  if (decodedPath === PROJECT_PREFIX || decodedPath.startsWith(`${PROJECT_PREFIX}/`)) {
-    candidates.push(decodedPath.replace(/^\/project-dokuha\/?/, '/'));
-  }
 
-  for (const candidatePath of candidates) {
-    const relativePath = candidatePath.replace(/^\/+/, '') || 'index.html';
-    const candidate = path.resolve(rootDir, relativePath);
-    if (!candidate.startsWith(rootDir + path.sep) && candidate !== rootDir) continue;
-
+  for (const candidate of buildCandidates(rootDir, decodedPath)) {
     const candidateStat = await stat(candidate).catch(() => null);
-    if (candidateStat?.isDirectory()) return path.join(candidate, 'index.html');
+    if (candidateStat?.isDirectory()) {
+      const indexPath = path.join(candidate, 'index.html');
+      const indexStat = await stat(indexPath).catch(() => null);
+      if (indexStat?.isFile()) return indexPath;
+    }
     if (candidateStat?.isFile()) return candidate;
   }
   return null;
@@ -147,12 +200,18 @@ server.on('listening', () => {
   const address = server.address();
   const actualPort = typeof address === 'object' && address ? address.port : port;
   const appBaseUrl = `http://${host}:${actualPort}`;
-  const bridgeUrl = `${appBaseUrl}/apps/st-bridge/bridge.js?env=local&appBase=${encodeURIComponent(appBaseUrl)}&force=1&v=dev`;
+  const loaderUrl = `${appBaseUrl}/apps/st-bridge/dokuha-bridge-loader.js?env=local&appBase=${encodeURIComponent(appBaseUrl)}&force=1&v=${LOCAL_CACHE_KEY}`;
+  const bridgeUrl = `${appBaseUrl}/apps/st-bridge/bridge.js?env=local&appBase=${encodeURIComponent(appBaseUrl)}&force=1&v=${LOCAL_CACHE_KEY}`;
+  const snippetUrl = `${appBaseUrl}/apps/st-bridge/snippets/dokuha-local.js?v=${LOCAL_CACHE_KEY}`;
   const scriptPath = path.relative(process.cwd(), fileURLToPath(import.meta.url));
   console.log(`[DOKUHA local server] ${scriptPath}`);
   console.log(`[DOKUHA local server] serving ${rootDir}`);
   console.log(`[DOKUHA local server] ${appBaseUrl}`);
-  console.log(`[DOKUHA local server] bridge ${bridgeUrl}`);
+  console.log(`[DOKUHA local server] bridge asset ${bridgeUrl}`);
+  console.log('[DOKUHA local server] SillyTavern local snippet:');
+  console.log(`await import('${loaderUrl}');`);
+  console.log('[DOKUHA local server] compact snippet:');
+  console.log(`await import('${snippetUrl}');`);
 });
 
 listen(port);

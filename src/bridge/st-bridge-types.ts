@@ -13,12 +13,15 @@ export interface DokuhaSTBridgeState {
   loadedAt: string;
 }
 
-export interface DokuhaAffectionProfile {
-  affection: number;
-  affectionTier: 'low' | 'mid' | 'high';
+export interface DokuhaFamiliarityProfile {
+  familiarityPoints: number;
+  familiarityTier: 'low' | 'mid' | 'high';
   attachmentLevel: 'non_attached' | 'light_attached' | 'heavy_attached';
   relationshipStage: 'neighbor' | 'friend' | 'lover';
+  thresholds?: Record<string, unknown>;
 }
+
+export type DokuhaAffectionProfile = DokuhaFamiliarityProfile;
 
 export interface DokuhaSTBridgeApi {
   version: string;
@@ -68,11 +71,14 @@ export interface DokuhaMvuzSchema {
 declare global {
   interface Window {
     STBridge?: DokuhaSTBridgeApi;
+    DOKUHA_ST_API?: any;
+    __DOKUHA_ST_BRIDGE_READY__?: Promise<unknown>;
     ST_BRIDGE_PACK?: string;
     ST_BRIDGE_URL?: string;
     ST_BRIDGE_MANIFEST_URL?: string;
     ST_BRIDGE_ENV?: 'local' | 'prod';
     ST_BRIDGE_CACHE_BUST?: string;
+    ST_BRIDGE_FORCE_RELOAD?: boolean | string | number;
     DOKUHA_APP_BASE_URL?: string;
     DOKUHA_APP_URL?: string;
     DOKUHA_STATUS_URL?: string;
@@ -81,6 +87,7 @@ declare global {
       DEFAULT_DOKUHA_STATE: unknown;
       makeDefaultDokuhaState(): unknown;
       normalizeDokuhaState(value?: unknown): unknown;
+      deriveFamiliarityProfile(stateOrPoints: unknown): DokuhaFamiliarityProfile;
       deriveAffectionProfile(stateOrAffection: unknown): DokuhaAffectionProfile;
       DokuhaSchema?: unknown;
       DOKUHAStatDataSchema?: unknown;
@@ -88,9 +95,12 @@ declare global {
     DOKUHAPlugin?: {
       version: string;
       bridge: DokuhaSTBridgeApi;
+      initState(options?: Record<string, unknown>): Promise<unknown>;
+      initVariables(options?: Record<string, unknown>): Promise<unknown>;
       loadState(options?: Record<string, unknown>): Promise<unknown>;
       saveState(nextState: unknown, options?: Record<string, unknown>): Promise<unknown>;
       patchState(patcher: unknown, options?: Record<string, unknown>): Promise<unknown>;
+      getFamiliarityProfile(options?: Record<string, unknown>): Promise<DokuhaFamiliarityProfile>;
       getAffectionProfile(options?: Record<string, unknown>): Promise<DokuhaAffectionProfile>;
       refreshStatus(reason?: string): Promise<boolean>;
       openStatus(): unknown;

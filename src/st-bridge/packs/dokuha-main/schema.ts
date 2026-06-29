@@ -1,8 +1,11 @@
 import {
   DEFAULT_DOKUHA_STATE as SHARED_DEFAULT_DOKUHA_STATE,
+  DEFAULT_DOKUHA_SYSTEM_STATE as SHARED_DEFAULT_DOKUHA_SYSTEM_STATE,
   cloneJson,
-  deriveAffectionProfile as deriveSharedAffectionProfile,
-  normalizeDokuhaState as normalizeSharedDokuhaState
+  deriveFamiliarityProfile as deriveSharedFamiliarityProfile,
+  derivePhysiologyProfile as deriveSharedPhysiologyProfile,
+  normalizeDokuhaState as normalizeSharedDokuhaState,
+  normalizeDokuhaSystemState as normalizeSharedDokuhaSystemState
 } from '../../shared/dokuha';
 
 type RegisterMvuSchema = (schema: unknown) => void;
@@ -25,6 +28,7 @@ type RegisterMvuSchema = (schema: unknown) => void;
   const ROOT = BRIDGE_HOST.apiRoot || CURRENT_ROOT.DOKUHA_ST_API_ROOT || CURRENT_ROOT.DOKUHA_ST_HOST_ROOT || CURRENT_ROOT;
 
   const DEFAULT_DOKUHA_STATE = SHARED_DEFAULT_DOKUHA_STATE;
+  const DEFAULT_DOKUHA_SYSTEM_STATE = SHARED_DEFAULT_DOKUHA_SYSTEM_STATE;
 
   function isObject(value) {
     return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -40,20 +44,28 @@ type RegisterMvuSchema = (schema: unknown) => void;
     return Math.max(min, Math.min(max, Math.round(next)));
   }
 
-  function normalizeString(value, fallback = '') {
-    return typeof value === 'string' && value.trim() ? value.trim() : fallback;
-  }
-
   function makeDefaultDokuhaState() {
     return clone(DEFAULT_DOKUHA_STATE, DEFAULT_DOKUHA_STATE);
+  }
+
+  function makeDefaultDokuhaSystemState() {
+    return clone(DEFAULT_DOKUHA_SYSTEM_STATE, DEFAULT_DOKUHA_SYSTEM_STATE);
   }
 
   function normalizeDokuhaState(value = {}) {
     return normalizeSharedDokuhaState(value);
   }
 
-  function deriveAffectionProfile(stateOrAffection) {
-    return deriveSharedAffectionProfile(stateOrAffection);
+  function normalizeDokuhaSystemState(value = {}) {
+    return normalizeSharedDokuhaSystemState(value);
+  }
+
+  function deriveFamiliarityProfile(stateOrPoints) {
+    return deriveSharedFamiliarityProfile(stateOrPoints);
+  }
+
+  function derivePhysiologyProfile(stateOrDokuha, systemOrTime = {}) {
+    return deriveSharedPhysiologyProfile(stateOrDokuha, systemOrTime);
   }
 
   function resolveZod() {
@@ -74,13 +86,16 @@ type RegisterMvuSchema = (schema: unknown) => void;
     const zod = resolveZod();
     if (!zod || typeof zod.object !== 'function' || typeof zod.any !== 'function') return null;
     const dokuhaSchema = zod.any().default({}).transform((value) => normalizeDokuhaState(value));
+    const systemSchema = zod.any().default({}).transform((value) => normalizeDokuhaSystemState(value));
     const statDataSchema = zod.object({
-      dokuha: dokuhaSchema
+      dokuha: dokuhaSchema,
+      system: systemSchema
     }).passthrough().transform((statData) => ({
       ...statData,
-      dokuha: normalizeDokuhaState(statData.dokuha)
+      dokuha: normalizeDokuhaState(statData.dokuha),
+      system: normalizeDokuhaSystemState(statData.system)
     }));
-    return { dokuhaSchema, statDataSchema };
+    return { dokuhaSchema, systemSchema, statDataSchema };
   }
 
   const schemas = createStatDataSchema();
@@ -88,10 +103,16 @@ type RegisterMvuSchema = (schema: unknown) => void;
   ROOT.DOKUHASchemaRuntime = {
     product: 'project-dokuha',
     DEFAULT_DOKUHA_STATE,
+    DEFAULT_DOKUHA_SYSTEM_STATE,
     makeDefaultDokuhaState,
+    makeDefaultDokuhaSystemState,
     normalizeDokuhaState,
-    deriveAffectionProfile,
+    normalizeDokuhaSystemState,
+    deriveFamiliarityProfile,
+    deriveAffectionProfile: deriveFamiliarityProfile,
+    derivePhysiologyProfile,
     DokuhaSchema: schemas?.dokuhaSchema || null,
+    DokuhaSystemSchema: schemas?.systemSchema || null,
     DOKUHAStatDataSchema: schemas?.statDataSchema || null
   };
 

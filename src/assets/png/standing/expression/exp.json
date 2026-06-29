@@ -1,0 +1,735 @@
+{
+  "count": 84,
+  "expressions": [
+    {
+      "id": 1,
+      "name": "exp_default",
+      "face": "face_default",
+      "mouth": "mouth_neutral",
+      "eye": "eye_normal",
+      "brow": "brow_down"
+    },
+    {
+      "id": 2,
+      "name": "exp_smile_soft",
+      "face": "face_default",
+      "mouth": "mouth_smile",
+      "eye": "eye_normal",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 3,
+      "name": "exp_serious",
+      "face": "face_default",
+      "mouth": "mouth_down_2",
+      "eye": "eye_normal",
+      "brow": "brow_up"
+    },
+    {
+      "id": 4,
+      "name": "exp_glum",
+      "face": "face_default",
+      "mouth": "mouth_down_2",
+      "eye": "eye_normal",
+      "brow": "brow_down"
+    },
+    {
+      "id": 5,
+      "name": "exp_cheerful",
+      "face": "face_default",
+      "mouth": "mouth_smile",
+      "eye": "eye_half_1",
+      "brow": "brow_up"
+    },
+    {
+      "id": 6,
+      "name": "exp_huh",
+      "face": "face_default",
+      "mouth": "mouth_huh_1",
+      "eye": "eye_half_1",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 7,
+      "name": "exp_deflated",
+      "face": "face_default",
+      "mouth": "mouth_awawa",
+      "eye": "eye_half_3",
+      "brow": "brow_down"
+    },
+    {
+      "id": 8,
+      "name": "exp_pout",
+      "face": "face_default",
+      "mouth": "mouth_pout",
+      "eye": "eye_half_4",
+      "brow": "brow_up"
+    },
+    {
+      "id": 9,
+      "name": "exp_smirk",
+      "face": "face_default",
+      "mouth": "mouth_smirk",
+      "eye": "eye_half_4",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 10,
+      "name": "exp_smile_wry",
+      "face": "face_default",
+      "mouth": "mouth_smirk",
+      "eye": "eye_smile_2",
+      "brow": "brow_down",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "exp_concerned",
+      "face": "face_default",
+      "mouth": "mouth_down_2",
+      "eye": "eye_normal",
+      "brow": "brow_down"
+    },
+    {
+      "id": 12,
+      "name": "exp_pleading",
+      "face": "face_default",
+      "mouth": "mouth_huh_2",
+      "eye": "eye_half_3",
+      "brow": "brow_down"
+    },
+    {
+      "id": 13,
+      "name": "exp_closed",
+      "face": "face_default",
+      "mouth": "mouth_neutral",
+      "eye": "eye_closed",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 14,
+      "name": "exp_playful",
+      "face": "face_default",
+      "mouth": "mouth_tongue",
+      "eye": "eye_smile_2",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 15,
+      "name": "exp_sparkle",
+      "face": "face_default",
+      "mouth": "mouth_blank_1",
+      "eye": "eye_star",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 16,
+      "name": "exp_surprised",
+      "face": "face_default",
+      "mouth": "mouth_huh_1",
+      "eye": "eye_wide_1",
+      "brow": "brow_normal",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "exp_shocked_sad",
+      "face": "face_default",
+      "mouth": "mouth_huh_2",
+      "eye": "eye_wide_1",
+      "brow": "brow_down",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "exp_panic",
+      "face": "face_default",
+      "mouth": "mouth_awawa",
+      "eye": "eye_wide_1",
+      "brow": "brow_down"
+    },
+    {
+      "id": 19,
+      "name": "exp_smile_closed",
+      "face": "face_default",
+      "mouth": "mouth_smile",
+      "eye": "eye_smile_2",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 20,
+      "name": "exp_smile_twitch",
+      "face": "face_default",
+      "mouth": "mouth_smirk",
+      "eye": "eye_smile_2",
+      "brow": "brow_down",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 21,
+      "name": "exp_smile_hollow",
+      "face": "face_shadow",
+      "mouth": "mouth_smile",
+      "eye": "eye_half_3",
+      "brow": "brow_down"
+    },
+    {
+      "id": 22,
+      "name": "exp_repulsed",
+      "face": "face_shadow",
+      "mouth": "mouth_gritting_teeth",
+      "eye": "eye_half_3",
+      "brow": "brow_down",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 23,
+      "name": "exp_craving",
+      "face": "face_default",
+      "mouth": "mouth_drool",
+      "eye": "eye_line",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 24,
+      "name": "exp_relieved",
+      "face": "face_default",
+      "mouth": "mouth_smile",
+      "eye": "eye_cry",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 25,
+      "name": "exp_sob",
+      "face": "face_default",
+      "mouth": "mouth_awawa",
+      "eye": "eye_cry",
+      "brow": "brow_down"
+    },
+    {
+      "id": 26,
+      "name": "exp_cry_frustrated",
+      "face": "face_blush",
+      "mouth": "mouth_gritting_teeth",
+      "eye": "eye_cry",
+      "brow": "brow_up"
+    },
+    {
+      "id": 27,
+      "name": "exp_tears_of_joy",
+      "face": "face_blush",
+      "mouth": "mouth_smile",
+      "eye": "eye_cry",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 28,
+      "name": "exp_xd_hyper",
+      "face": "face_default",
+      "mouth": "mouth_open",
+      "eye": "eye_xd",
+      "brow": "brow_up"
+    },
+    {
+      "id": 29,
+      "name": "exp_xd_ouch",
+      "face": "face_default",
+      "mouth": "mouth_awawa",
+      "eye": "eye_xd",
+      "brow": "brow_down",
+      "other": [
+        "eye_tears_1"
+      ]
+    },
+    {
+      "id": 30,
+      "name": "exp_xd_taunt",
+      "face": "face_default",
+      "mouth": "mouth_tongue",
+      "eye": "eye_xd",
+      "brow": "brow_up"
+    },
+    {
+      "id": 31,
+      "name": "exp_xd_pout",
+      "face": "face_default",
+      "mouth": "mouth_pout",
+      "eye": "eye_xd",
+      "brow": "brow_up",
+      "other": [
+        "eye_tears_1"
+      ]
+    },
+    {
+      "id": 32,
+      "name": "exp_dizzy",
+      "face": "face_default",
+      "mouth": "mouth_awawa",
+      "eye": "eye_dizzy",
+      "brow": "brow_down",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "exp_craving_star",
+      "face": "face_default",
+      "mouth": "mouth_drool",
+      "eye": "eye_star",
+      "brow": "brow_up"
+    },
+    {
+      "id": 34,
+      "name": "exp_jitome_deadpan",
+      "face": "face_default",
+      "mouth": "mouth_down_2",
+      "eye": "eye_jitome_1",
+      "brow": "brow_down"
+    },
+    {
+      "id": 35,
+      "name": "exp_jitome_amused",
+      "face": "face_default",
+      "mouth": "mouth_smirk",
+      "eye": "eye_jitome_2",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 36,
+      "name": "exp_jitome_glare",
+      "face": "face_default",
+      "mouth": "mouth_pout",
+      "eye": "eye_jitome_1",
+      "brow": "brow_up"
+    },
+    {
+      "id": 37,
+      "name": "exp_jitome_meh",
+      "face": "face_default",
+      "mouth": "mouth_huh_2",
+      "eye": "eye_jitome_2",
+      "brow": "brow_down"
+    },
+    {
+      "id": 38,
+      "name": "exp_jitome_cringe",
+      "face": "face_default",
+      "mouth": "mouth_awawa",
+      "eye": "eye_jitome_1",
+      "brow": "brow_down"
+    },
+    {
+      "id": 39,
+      "name": "exp_jitome_cheeky",
+      "face": "face_default",
+      "mouth": "mouth_smirk",
+      "eye": "eye_jitome_1",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 40,
+      "name": "exp_jitome_hopeless",
+      "face": "face_default",
+      "mouth": "mouth_down_2",
+      "eye": "eye_jitome_2",
+      "brow": "brow_down"
+    },
+    {
+      "id": 41,
+      "name": "exp_laugh_lmao",
+      "face": "face_default",
+      "mouth": "mouth_open",
+      "eye": "eye_smile_1",
+      "brow": "brow_down"
+    },
+    {
+      "id": 42,
+      "name": "exp_line_speechless",
+      "face": "face_default",
+      "mouth": "mouth_down_2",
+      "eye": "eye_line",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 43,
+      "name": "exp_line_purr",
+      "face": "face_default",
+      "mouth": "mouth_smile",
+      "eye": "eye_line",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 44,
+      "name": "exp_line_drool",
+      "face": "face_default",
+      "mouth": "mouth_drool",
+      "eye": "eye_line",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 45,
+      "name": "exp_peaceful_closed",
+      "face": "face_default",
+      "mouth": "mouth_smile",
+      "eye": "eye_closed",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 46,
+      "name": "exp_pain_closed",
+      "face": "face_default",
+      "mouth": "mouth_gritting_teeth",
+      "eye": "eye_closed",
+      "brow": "brow_down",
+      "other": [
+        "eye_tears_1"
+      ]
+    },
+    {
+      "id": 47,
+      "name": "exp_confident_closed",
+      "face": "face_default",
+      "mouth": "mouth_smirk",
+      "eye": "eye_closed",
+      "brow": "brow_up"
+    },
+    {
+      "id": 48,
+      "name": "exp_sigh_closed",
+      "face": "face_default",
+      "mouth": "mouth_huh_2",
+      "eye": "eye_closed",
+      "brow": "brow_down"
+    },
+    {
+      "id": 49,
+      "name": "exp_pout_closed",
+      "face": "face_default",
+      "mouth": "mouth_pout",
+      "eye": "eye_closed",
+      "brow": "brow_up"
+    },
+    {
+      "id": 50,
+      "name": "exp_skeptical",
+      "face": "face_default",
+      "mouth": "mouth_neutral",
+      "eye": "eye_half_4",
+      "brow": "brow_up"
+    },
+    {
+      "id": 51,
+      "name": "exp_tch",
+      "face": "face_default",
+      "mouth": "mouth_gritting_teeth",
+      "eye": "eye_half_5",
+      "brow": "brow_up"
+    },
+    {
+      "id": 52,
+      "name": "exp_dead_inside",
+      "face": "face_default",
+      "mouth": "mouth_huh_2",
+      "eye": "eye_socket",
+      "brow": "brow_down"
+    },
+    {
+      "id": 53,
+      "name": "exp_nauseous",
+      "face": "face_pale",
+      "mouth": "mouth_gritting_teeth",
+      "eye": "eye_socket",
+      "brow": "brow_down",
+      "other": [
+        "ear_face_pale",
+        "sweat"
+      ]
+    },
+    {
+      "id": 54,
+      "name": "exp_ghastly",
+      "face": "face_pale",
+      "mouth": "mouth_down_2",
+      "eye": "eye_socket",
+      "brow": "brow_down",
+      "other": [
+        "ear_face_pale"
+      ]
+    },
+    {
+      "id": 55,
+      "name": "exp_shutdown",
+      "face": "face_shadow",
+      "mouth": "mouth_neutral",
+      "eye": "eye_jitome_2",
+      "brow": "brow_down"
+    },
+    {
+      "id": 56,
+      "name": "exp_horrified",
+      "face": "face_shadow",
+      "mouth": "mouth_blank_2",
+      "eye": "eye_wide_2",
+      "brow": "brow_down"
+    },
+    {
+      "id": 57,
+      "name": "exp_busted",
+      "face": "face_default",
+      "mouth": "mouth_smirk",
+      "eye": "eye_wide_1",
+      "brow": "brow_normal",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 58,
+      "name": "exp_enraged",
+      "face": "face_shadow",
+      "mouth": "mouth_gritting_teeth",
+      "eye": "eye_wide_1",
+      "brow": "brow_up"
+    },
+    {
+      "id": 59,
+      "name": "exp_triggered",
+      "face": "face_shadow",
+      "mouth": "mouth_down_2",
+      "eye": "eye_wide_2",
+      "brow": "brow_up"
+    },
+    {
+      "id": 60,
+      "name": "exp_blush_huh",
+      "face": "face_blush",
+      "mouth": "mouth_huh_1",
+      "eye": "eye_normal",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 61,
+      "name": "exp_blush_panic",
+      "face": "face_blush",
+      "mouth": "mouth_awawa",
+      "eye": "eye_wide_1",
+      "brow": "brow_normal",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 62,
+      "name": "exp_blush_overload",
+      "face": "face_blush",
+      "mouth": "mouth_awawa",
+      "eye": "eye_dizzy",
+      "brow": "brow_normal",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 63,
+      "name": "exp_blush_ouch",
+      "face": "face_blush",
+      "mouth": "mouth_blank_1",
+      "eye": "eye_xd",
+      "brow": "brow_up",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 64,
+      "name": "exp_blush_disgust",
+      "face": "face_blush",
+      "mouth": "mouth_awawa",
+      "eye": "eye_jitome_1",
+      "brow": "brow_down"
+    },
+    {
+      "id": 65,
+      "name": "exp_blush_sob",
+      "face": "face_blush",
+      "mouth": "mouth_awawa",
+      "eye": "eye_cry",
+      "brow": "brow_down"
+    },
+    {
+      "id": 66,
+      "name": "exp_blush_embarrassed",
+      "face": "face_blush",
+      "mouth": "mouth_awawa",
+      "eye": "eye_closed",
+      "brow": "brow_down",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 67,
+      "name": "exp_blush_awkward",
+      "face": "face_blush",
+      "mouth": "mouth_open",
+      "eye": "eye_smile_1",
+      "brow": "brow_down",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 68,
+      "name": "exp_blush_pain_closed",
+      "face": "face_blush",
+      "mouth": "mouth_gritting_teeth",
+      "eye": "eye_closed",
+      "brow": "brow_down",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 69,
+      "name": "exp_derp",
+      "face": "face_default",
+      "mouth": "mouth_drool",
+      "eye": "eye_half_3",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 70,
+      "name": "exp_sadistic",
+      "face": "face_shadow",
+      "mouth": "mouth_smirk",
+      "eye": "eye_half_4",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 71,
+      "name": "exp_sleep_neutral",
+      "face": "face_default",
+      "mouth": "mouth_neutral",
+      "eye": "eye_closed",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 72,
+      "name": "exp_sleep_peaceful",
+      "face": "face_default",
+      "mouth": "mouth_smile",
+      "eye": "eye_closed",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 73,
+      "name": "exp_sleep_drool",
+      "face": "face_default",
+      "mouth": "mouth_drool",
+      "eye": "eye_line",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 74,
+      "name": "exp_sleep_nightmare",
+      "face": "face_default",
+      "mouth": "mouth_gritting_teeth",
+      "eye": "eye_closed",
+      "brow": "brow_down",
+      "other": [
+        "sweat"
+      ]
+    },
+    {
+      "id": 75,
+      "name": "exp_drowsy_yawn",
+      "face": "face_default",
+      "mouth": "mouth_huh_2",
+      "eye": "eye_half_2",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 76,
+      "name": "exp_drowsy_neutral",
+      "face": "face_default",
+      "mouth": "mouth_neutral",
+      "eye": "eye_half_2",
+      "brow": "brow_normal"
+    },
+    {
+      "id": 77,
+      "name": "exp_drowsy_smile",
+      "face": "face_default",
+      "mouth": "mouth_smile",
+      "eye": "eye_half_2",
+      "brow": "brow_down"
+    },
+    {
+      "id": 78,
+      "name": "exp_blush_drowsy",
+      "face": "face_blush",
+      "mouth": "mouth_huh_2",
+      "eye": "eye_half_2",
+      "brow": "brow_down"
+    },
+    {
+      "id": 79,
+      "name": "exp_drowsy_pout",
+      "face": "face_default",
+      "mouth": "mouth_pout",
+      "eye": "eye_half_2",
+      "brow": "brow_up"
+    },
+    {
+      "id": 80,
+      "name": "exp_drowsy_awawa",
+      "face": "face_default",
+      "mouth": "mouth_awawa",
+      "eye": "eye_half_2",
+      "brow": "brow_down"
+    },
+    {
+      "id": 81,
+      "name": "exp_drowsy_huh",
+      "face": "face_default",
+      "mouth": "mouth_huh_1",
+      "eye": "eye_half_2",
+      "brow": "brow_down"
+    },
+    {
+      "id": 82,
+      "name": "exp_cry_agony",
+      "face": "face_shadow",
+      "mouth": "mouth_gritting_teeth",
+      "eye": "eye_cry",
+      "brow": "brow_down"
+    },
+    {
+      "id": 83,
+      "name": "exp_pathetic",
+      "face": "face_default",
+      "mouth": "mouth_awawa",
+      "eye": "eye_wide_1",
+      "brow": "brow_down"
+    },
+    {
+      "id": 84,
+      "name": "exp_star_serious",
+      "face": "face_default",
+      "mouth": "mouth_down_1",
+      "eye": "eye_star",
+      "brow": "brow_up"
+    }
+  ]
+}
