@@ -475,7 +475,7 @@
     const bridgeUrl = new URL(getCurrentScriptUrl());
     const bridgeRoot = new URL(".", bridgeUrl);
     const params = bridgeUrl.searchParams;
-    const buildCacheKey = "202332cd1b8a";
+    const buildCacheKey = "59511c781ae9";
     const cacheBust = params.get("v") || params.get("cache") || normalizeString(getGlobalValue("ST_BRIDGE_CACHE_BUST")) || buildCacheKey;
     const forceReload = params.get("force") === "1" || normalizeBooleanFlag(getGlobalValue("ST_BRIDGE_FORCE_RELOAD"));
     function resolveBridgeProfile() {
