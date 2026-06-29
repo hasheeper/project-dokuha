@@ -94,7 +94,7 @@ export function readExpressionName(value: unknown): string {
 
 export function canonicalizeExpressionName(value: string): string {
   return normalizeExpressionText(value)
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/([a-z0-9])([A-Z])/g, (_, left: string, right: string) => `${left}_${right}`)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
@@ -313,7 +313,7 @@ function findFuzzyRuleAlias(token: string, rules: Map<string, KeywordEffect[]>):
 
 function canonicalizeAssetName(value: string): string {
   return value
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/([a-z0-9])([A-Z])/g, (_, left: string, right: string) => `${left}_${right}`)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');

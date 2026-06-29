@@ -284,7 +284,7 @@
 
       function canonicalizeExpressionName(value) {
         return normalizeExpressionText(value)
-          .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+          .replace(/([a-z0-9])([A-Z])/g, function (_, left, right) { return left + '_' + right; })
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '_')
           .replace(/^_+|_+$/g, '')
@@ -293,7 +293,7 @@
 
       function canonicalizeAssetName(value) {
         return String(value || '')
-          .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+          .replace(/([a-z0-9])([A-Z])/g, function (_, left, right) { return left + '_' + right; })
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '_')
           .replace(/^_+|_+$/g, '');

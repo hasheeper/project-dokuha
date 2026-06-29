@@ -154,7 +154,7 @@ ${indent}}
 
 ${indent}function canonicalizeExpressionName(value) {
 ${indent}  return normalizeExpressionText(value)
-${indent}    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+${indent}    .replace(/([a-z0-9])([A-Z])/g, function (_, left, right) { return left + '_' + right; })
 ${indent}    .toLowerCase()
 ${indent}    .replace(/[^a-z0-9]+/g, '_')
 ${indent}    .replace(/^_+|_+$/g, '')
@@ -163,7 +163,7 @@ ${indent}}
 
 ${indent}function canonicalizeAssetName(value) {
 ${indent}  return String(value || '')
-${indent}    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+${indent}    .replace(/([a-z0-9])([A-Z])/g, function (_, left, right) { return left + '_' + right; })
 ${indent}    .toLowerCase()
 ${indent}    .replace(/[^a-z0-9]+/g, '_')
 ${indent}    .replace(/^_+|_+$/g, '');
@@ -624,7 +624,9 @@ function renderHtml({ title, assetBaseUrl }: OutputConfig): string {
 
       function canonicalizeExpressionName(value) {
         return normalizeExpressionText(value)
-          .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+          .replace(/([a-z0-9])([A-Z])/g, function (_, left, right) {
+            return left + '_' + right;
+          })
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '_')
           .replace(/^_+|_+$/g, '')
@@ -633,7 +635,9 @@ function renderHtml({ title, assetBaseUrl }: OutputConfig): string {
 
       function canonicalizeAssetName(value) {
         return value
-          .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+          .replace(/([a-z0-9])([A-Z])/g, function (_, left, right) {
+            return left + '_' + right;
+          })
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '_')
           .replace(/^_+|_+$/g, '');
