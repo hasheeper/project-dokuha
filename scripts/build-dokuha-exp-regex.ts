@@ -95,6 +95,341 @@ function scriptJson(value: unknown): string {
   return JSON.stringify(value).replace(/<\//g, '<\\/');
 }
 
+function renderFallbackConstants(indent: string): string {
+  return [
+    `${indent}const FALLBACK_CONFIG = ${scriptJson(fallbackConfig)};`,
+    `${indent}const FALLBACK_DEFAULTS = FALLBACK_CONFIG.defaults;`,
+    `${indent}const FALLBACK_PRIORITIES = FALLBACK_CONFIG.priorities;`,
+    `${indent}const FALLBACK_THRESHOLDS = FALLBACK_CONFIG.thresholds;`,
+    `${indent}const FALLBACK_STOP_TOKENS = new Set(FALLBACK_CONFIG.stopTokens);`,
+    `${indent}const KEYWORD_RULES = FALLBACK_CONFIG.keywordRules;`
+  ].join('\n');
+}
+
+function renderFallbackResolverFunctions(indent: string): string {
+  return `${indent}function resolveExpression(value) {
+${indent}  const requested = readExpressionName(value);
+${indent}  if (!requested) return defaultExpression();
+
+${indent}  const exact = findExactExpression(requested);
+${indent}  if (exact) return exact;
+
+${indent}  const canonical = canonicalizeExpressionName(requested);
+${indent}  const normalized = EXP_DATA.expressions.find(function (item) {
+${indent}    return canonicalizeExpressionName(item.name) === canonical;
+${indent}  });
+${indent}  if (normalized) return normalized;
+
+${indent}  const typo = findTypoExpression(canonical);
+${indent}  if (typo) return typo;
+
+${indent}  const synthetic = buildSyntheticExpression(requested, canonical);
+${indent}  return synthetic || defaultExpression();
+${indent}}
+
+${indent}function readExpressionName(value) {
+${indent}  if (value && typeof value === 'object' && typeof value.name === 'string') return normalizeExpressionText(value.name);
+${indent}  if (typeof value !== 'string' && typeof value !== 'number') return '';
+${indent}  return normalizeExpressionText(String(value));
+${indent}}
+
+${indent}function normalizeExpressionText(value) {
+${indent}  let text = String(value || '').trim();
+${indent}  try {
+${indent}    const parsed = JSON.parse(text);
+${indent}    if (typeof parsed === 'string' || typeof parsed === 'number') text = String(parsed).trim();
+${indent}  } catch (_) {}
+${indent}  return extractExpressionTag(text)
+${indent}    .replace(/<\\/?dokuha-exp>/gi, '')
+${indent}    .replace(/^[\\"'\\\`]+|[\\"'\\\`]+$/g, '')
+${indent}    .trim();
+${indent}}
+
+${indent}function extractExpressionTag(value) {
+${indent}  const text = String(value || '');
+${indent}  const dokuhaMatch = text.match(/<dokuha-exp>\\s*([\\s\\S]*?)\\s*<\\/dokuha-exp>/i);
+${indent}  if (dokuhaMatch) return dokuhaMatch[1] || '';
+${indent}  return text;
+${indent}}
+
+${indent}function canonicalizeExpressionName(value) {
+${indent}  return normalizeExpressionText(value)
+${indent}    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+${indent}    .toLowerCase()
+${indent}    .replace(/[^a-z0-9]+/g, '_')
+${indent}    .replace(/^_+|_+$/g, '')
+${indent}    .replace(/^(exp_)+/, '');
+${indent}}
+
+${indent}function canonicalizeAssetName(value) {
+${indent}  return String(value || '')
+${indent}    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+${indent}    .toLowerCase()
+${indent}    .replace(/[^a-z0-9]+/g, '_')
+${indent}    .replace(/^_+|_+$/g, '');
+${indent}}
+
+${indent}function findExactExpression(requested) {
+${indent}  const byId = Number(requested);
+${indent}  if (Number.isFinite(byId)) {
+${indent}    return EXP_DATA.expressions.find(function (item) {
+${indent}      return item.id === Math.round(byId);
+${indent}    }) || null;
+${indent}  }
+${indent}  return EXP_DATA.expressions.find(function (item) {
+${indent}    return item.name === requested;
+${indent}  }) || null;
+${indent}}
+
+${indent}function findTypoExpression(canonical) {
+${indent}  if (canonical.length < 5) return null;
+${indent}  const ranked = EXP_DATA.expressions
+${indent}    .map(function (item) {
+${indent}      return { expression: item, distance: damerauLevenshteinDistance(canonical, canonicalizeExpressionName(item.name)) };
+${indent}    })
+${indent}    .sort(function (a, b) {
+${indent}      return a.distance - b.distance;
+${indent}    });
+${indent}  const best = ranked[0];
+${indent}  const second = ranked[1];
+${indent}  if (!best) return null;
+${indent}  const target = canonicalizeExpressionName(best.expression.name);
+${indent}  const confidence = normalizedEditConfidence(canonical, target, best.distance);
+${indent}  const allowedDistance = best.distance <= 1 || (canonical.length >= 8 && best.distance <= 2);
+${indent}  const allowedConfidence = confidence >= FALLBACK_THRESHOLDS.presetMinConfidence;
+${indent}  const uniqueBest = !second || second.distance > best.distance;
+${indent}  return allowedDistance && allowedConfidence && uniqueBest ? best.expression : null;
+${indent}}
+
+${indent}function buildSyntheticExpression(sourceName, canonical) {
+${indent}  const rawTokens = canonical.split('_').filter(Boolean);
+${indent}  const tokens = rawTokens.filter(function (token) {
+${indent}    return !FALLBACK_STOP_TOKENS.has(token);
+${indent}  });
+${indent}  if (!tokens.length) return null;
+
+${indent}  const rules = buildKeywordRules();
+${indent}  const slots = {
+${indent}    face: { value: FALLBACK_DEFAULTS.face, priority: 0, order: -1 },
+${indent}    mouth: { value: FALLBACK_DEFAULTS.mouth, priority: 0, order: -1 },
+${indent}    eye: { value: FALLBACK_DEFAULTS.eye, priority: 0, order: -1 },
+${indent}    brow: { value: FALLBACK_DEFAULTS.brow, priority: 0, order: -1 }
+${indent}  };
+${indent}  const listSlots = { other: [] };
+${indent}  const matchedTokens = [];
+${indent}  const matchedIndexes = new Set();
+${indent}  let meaningfulMatches = 0;
+${indent}  let order = 0;
+
+${indent}  for (let index = 0; index < tokens.length;) {
+${indent}    const match = findRuleMatch(tokens, index, rules);
+${indent}    if (!match) {
+${indent}      index += 1;
+${indent}      continue;
+${indent}    }
+${indent}    matchedTokens.push(match.alias);
+${indent}    for (let offset = 0; offset < match.length; offset += 1) matchedIndexes.add(index + offset);
+${indent}    match.effects.forEach(function (effect) {
+${indent}      applyKeywordEffect(effect, slots, listSlots, order);
+${indent}    });
+${indent}    if (hasVisualEffect(match.effects)) meaningfulMatches += match.length;
+${indent}    order += 1;
+${indent}    index += match.length;
+${indent}  }
+
+${indent}  if (!matchedTokens.length) return null;
+${indent}  if (!meaningfulMatches) return null;
+${indent}  if (meaningfulMatches / tokens.length < FALLBACK_THRESHOLDS.syntheticMinTokenMatchRatio) return null;
+${indent}  const expression = {
+${indent}    id: 0,
+${indent}    name: 'exp_' + canonical,
+${indent}    face: slots.face.value,
+${indent}    mouth: slots.mouth.value,
+${indent}    eye: slots.eye.value,
+${indent}    brow: slots.brow.value,
+${indent}    synthetic: true,
+${indent}    sourceName,
+${indent}    matchedTokens: unique(matchedTokens),
+${indent}    unmatchedTokens: unique(tokens.filter(function (_, index) {
+${indent}      return !matchedIndexes.has(index);
+${indent}    }))
+${indent}  };
+${indent}  if (listSlots.other.length) expression.other = listSlots.other;
+${indent}  return expression;
+${indent}}
+
+${indent}function buildKeywordRules() {
+${indent}  const rules = new Map();
+${indent}  addExplicitAssetRules(rules, 'face', 'face_', ASSET_REFS.face);
+${indent}  addExplicitAssetRules(rules, 'mouth', 'mouth_', ASSET_REFS.mouth);
+${indent}  addExplicitAssetRules(rules, 'eye', 'eye_', ASSET_REFS.eye);
+${indent}  addExplicitAssetRules(rules, 'brow', 'brow_', ASSET_REFS.brow);
+${indent}  addExplicitAssetRules(rules, 'other', '', ASSET_REFS.other);
+${indent}  KEYWORD_RULES.forEach(function (rule) {
+${indent}    addRuleIfAvailable(rules, rule.alias, rule.effects);
+${indent}  });
+${indent}  return rules;
+${indent}}
+
+${indent}function addExplicitAssetRules(rules, slot, prefix, names) {
+${indent}  names.forEach(function (name) {
+${indent}    const canonical = canonicalizeAssetName(name);
+${indent}    const stripped = prefix ? canonicalizeAssetName(name.replace(new RegExp('^' + prefix, 'i'), '')) : canonical;
+${indent}    const effect = { slot, value: name, priority: FALLBACK_PRIORITIES.explicitComponent };
+${indent}    addRule(rules, canonical, [effect]);
+${indent}    addRule(rules, stripped, [effect]);
+${indent}  });
+${indent}}
+
+${indent}function addRuleIfAvailable(rules, alias, effects) {
+${indent}  const available = effects.filter(function (effect) {
+${indent}    return ASSET_REFS[effect.slot] && ASSET_REFS[effect.slot].includes(effect.value);
+${indent}  });
+${indent}  if (available.length) addRule(rules, alias, available);
+${indent}}
+
+${indent}function addRule(rules, alias, effects) {
+${indent}  const canonical = canonicalizeAssetName(alias);
+${indent}  if (!canonical) return;
+${indent}  unique([canonical, canonical.replace(/_/g, '')]).forEach(function (item) {
+${indent}    rules.set(item, (rules.get(item) || []).concat(effects));
+${indent}  });
+${indent}}
+
+${indent}function findRuleMatch(tokens, index, rules) {
+${indent}  const maxLength = Math.min(4, tokens.length - index);
+${indent}  for (let length = maxLength; length >= 1; length -= 1) {
+${indent}    const alias = tokens.slice(index, index + length).join('_');
+${indent}    const effects = rules.get(alias);
+${indent}    if (effects) return { alias, effects, length, fuzzy: false };
+${indent}  }
+${indent}  const fuzzyAlias = findFuzzyRuleAlias(tokens[index], rules);
+${indent}  const fuzzyEffects = fuzzyAlias ? rules.get(fuzzyAlias) : null;
+${indent}  return fuzzyAlias && fuzzyEffects ? { alias: fuzzyAlias, effects: fuzzyEffects, length: 1, fuzzy: true } : null;
+${indent}}
+
+${indent}function findFuzzyRuleAlias(token, rules) {
+${indent}  if (token.length < 4) return null;
+${indent}  const ranked = Array.from(rules.keys())
+${indent}    .filter(function (alias) { return !alias.includes('_') && alias.length >= 4; })
+${indent}    .map(function (alias) { return { alias, distance: damerauLevenshteinDistance(token, alias) }; })
+${indent}    .sort(function (a, b) { return a.distance - b.distance; });
+${indent}  const best = ranked[0];
+${indent}  const second = ranked[1];
+${indent}  if (!best) return null;
+${indent}  const allowed = best.distance <= FALLBACK_THRESHOLDS.shortTokenMaxDistance ||
+${indent}    (token.length >= FALLBACK_THRESHOLDS.longTokenMinLength && best.distance <= FALLBACK_THRESHOLDS.longTokenMaxDistance);
+${indent}  const uniqueBest = !second || second.distance > best.distance;
+${indent}  return allowed && uniqueBest ? best.alias : null;
+${indent}}
+
+${indent}function applyKeywordEffect(effect, slots, listSlots, order) {
+${indent}  if (effect.slot === 'other') {
+${indent}    if (!listSlots.other.includes(effect.value)) listSlots.other.push(effect.value);
+${indent}    return;
+${indent}  }
+${indent}  const current = slots[effect.slot];
+${indent}  if (effect.priority > current.priority || (effect.priority === current.priority && order >= current.order)) {
+${indent}    slots[effect.slot] = { value: effect.value, priority: effect.priority, order };
+${indent}  }
+${indent}}
+
+${indent}function defaultExpression() {
+${indent}  return EXP_DATA.expressions.find(function (item) {
+${indent}    return item.name === DEFAULT_EXPRESSION;
+${indent}  }) || EXP_DATA.expressions[0];
+${indent}}
+
+${indent}function normalizedEditConfidence(a, b, distance) {
+${indent}  const maxLength = Math.max(a.length, b.length);
+${indent}  return maxLength ? 1 - distance / maxLength : 1;
+${indent}}
+
+${indent}function hasVisualEffect(effects) {
+${indent}  return effects.some(function (effect) {
+${indent}    return effect.slot === 'face' ||
+${indent}      effect.slot === 'mouth' ||
+${indent}      effect.slot === 'eye' ||
+${indent}      effect.slot === 'brow' ||
+${indent}      effect.slot === 'other';
+${indent}  });
+${indent}}
+
+${indent}function damerauLevenshteinDistance(a, b) {
+${indent}  const previous = Array.from({ length: b.length + 1 }, function (_, index) { return index; });
+${indent}  const current = Array.from({ length: b.length + 1 }, function () { return 0; });
+${indent}  const transposed = Array.from({ length: b.length + 1 }, function () { return 0; });
+${indent}  for (let row = 1; row <= a.length; row += 1) {
+${indent}    current[0] = row;
+${indent}    for (let column = 1; column <= b.length; column += 1) {
+${indent}      const cost = a[row - 1] === b[column - 1] ? 0 : 1;
+${indent}      let distance = Math.min(current[column - 1] + 1, previous[column] + 1, previous[column - 1] + cost);
+${indent}      if (
+${indent}        row > 1 &&
+${indent}        column > 1 &&
+${indent}        a[row - 1] === b[column - 2] &&
+${indent}        a[row - 2] === b[column - 1]
+${indent}      ) {
+${indent}        distance = Math.min(distance, transposed[column - 2] + 1);
+${indent}      }
+${indent}      current[column] = distance;
+${indent}    }
+${indent}    for (let column = 0; column <= b.length; column += 1) {
+${indent}      transposed[column] = previous[column];
+${indent}      previous[column] = current[column];
+${indent}    }
+${indent}  }
+${indent}  return previous[b.length];
+${indent}}`;
+}
+
+function replaceRequired(source: string, pattern: RegExp, replacement: string, label: string): string {
+  if (!pattern.test(source)) throw new Error(`Unable to update ${label} in DOKUHA dossier template.`);
+  return source.replace(pattern, replacement);
+}
+
+function readDossierTemplate(file: string): string {
+  if (fs.existsSync(file)) return fs.readFileSync(file, 'utf8');
+  const fallback = path.join(rootDir, 'ST/regex/local/DOKUHA_DOSSIER.local.html');
+  if (fs.existsSync(fallback)) return fs.readFileSync(fallback, 'utf8');
+  throw new Error(`Missing DOKUHA dossier template: ${file}`);
+}
+
+function renderDossierHtml(output: OutputConfig): string {
+  let html = readDossierTemplate(output.file);
+  html = replaceRequired(
+    html,
+    /const EXP_DATA = [\s\S]*?;\n      const ASSET_REFS = /,
+    `const EXP_DATA = ${scriptJson(expData)};\n      const ASSET_REFS = `,
+    'expression data'
+  );
+  html = replaceRequired(
+    html,
+    /const ASSET_REFS = [\s\S]*?;\n      const STATIC_ASSET_BASE_URL = /,
+    `const ASSET_REFS = ${scriptJson(assetRefs)};\n      const STATIC_ASSET_BASE_URL = `,
+    'asset refs'
+  );
+  html = replaceRequired(
+    html,
+    /const STATIC_ASSET_BASE_URL = '[^']*';/,
+    `const STATIC_ASSET_BASE_URL = '${output.assetBaseUrl}';`,
+    'asset base url'
+  );
+  html = replaceRequired(
+    html,
+    /const CACHE_KEY = '__DOKUHA_EXP_IMAGE_CACHE__';\n(?:      const FALLBACK_CONFIG = [\s\S]*?      const KEYWORD_RULES = FALLBACK_CONFIG\.keywordRules;\n)?      const main = /,
+    `const CACHE_KEY = '__DOKUHA_EXP_IMAGE_CACHE__';\n${renderFallbackConstants('      ')}\n      const main = `,
+    'fallback constants'
+  );
+  html = replaceRequired(
+    html,
+    /      function (?:normalizeExpressionText|resolveExpression)\(value\) \{[\s\S]*?\n      function resolveOutfit/,
+    `${renderFallbackResolverFunctions('      ')}\n\n      function resolveOutfit`,
+    'fallback resolver'
+  );
+  return html;
+}
+
 function renderHtml({ title, assetBaseUrl }: OutputConfig): string {
   return `\`\`\`html
 <!DOCTYPE html>
@@ -1044,11 +1379,17 @@ for (const output of outputConfigs) {
   fs.writeFileSync(output.file, renderHtml(output));
 }
 
+for (const output of dossierOutputConfigs) {
+  fs.mkdirSync(path.dirname(output.file), { recursive: true });
+  fs.writeFileSync(output.file, renderDossierHtml(output));
+}
+
 
 fs.mkdirSync(path.dirname(assetCachePath), { recursive: true });
 fs.writeFileSync(assetCachePath, renderAssetCacheScript());
 
 console.log(`Wrote ${outputConfigs.length} DOKUHA expression regex wrappers.`);
+console.log(`Wrote ${dossierOutputConfigs.length} DOKUHA dossier regex wrappers.`);
 console.log(`Wrote ${path.relative(rootDir, assetCachePath)}.`);
 console.log(`Referenced expressions: ${expData.expressions.length}`);
 console.log(`Referenced PNG groups: ${Object.entries(assetRefs).map(([key, values]) => `${key}=${values.length}`).join(', ')}`);

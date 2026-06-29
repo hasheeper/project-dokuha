@@ -109,11 +109,17 @@ function asList(value: string | string[] | undefined): string[] {
 }
 
 function assertGeneratedResolverMatches(fixtures: unknown[]): void {
-  const htmlPath = join(rootDir, 'ST/regex/local/DOKUHA_EXP.local.html');
+  [
+    join(rootDir, 'ST/regex/local/DOKUHA_EXP.local.html'),
+    join(rootDir, 'ST/regex/local/DOKUHA_DOSSIER.local.html')
+  ].forEach((htmlPath) => assertGeneratedResolverMatchesFile(htmlPath, fixtures));
+}
+
+function assertGeneratedResolverMatchesFile(htmlPath: string, fixtures: unknown[]): void {
   const html = readFileSync(htmlPath, 'utf8');
   const scripts = Array.from(html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)).map((match) => match[1]);
   const runtimeScript = scripts.find((script) => script.includes('function resolveExpression(value)'));
-  assert(runtimeScript, 'generated local DOKUHA_EXP resolver script should exist');
+  assert(runtimeScript, `${htmlPath} resolver script should exist`);
 
   const instrumented = runtimeScript.replace(
     /\}\)\(\);\s*$/,
@@ -122,14 +128,14 @@ function assertGeneratedResolverMatches(fixtures: unknown[]): void {
   const sandbox = makeBrowserSandbox();
   vm.runInNewContext(instrumented, sandbox, { filename: htmlPath });
   const resolveGenerated = sandbox.window.__DOKUHA_TEST_RESOLVE__;
-  assert(typeof resolveGenerated === 'function', 'generated resolver should be exposed in test sandbox');
+  assert(typeof resolveGenerated === 'function', `${htmlPath} resolver should be exposed in test sandbox`);
 
   fixtures.forEach((fixture) => {
     const source = summarizeExpression(resolve(fixture));
     const generated = summarizeExpression(resolveGenerated(fixture) as ExpressionLayerRef);
     assert(
       JSON.stringify(source) === JSON.stringify(generated),
-      `generated resolver should match source resolver for ${String(fixture)}`
+      `${htmlPath} resolver should match source resolver for ${String(fixture)}`
     );
   });
 }
@@ -150,15 +156,34 @@ function summarizeExpression(expression: ExpressionLayerRef): Record<string, unk
 
 function makeBrowserSandbox(): Record<string, unknown> & { window: Record<string, unknown> } {
   const app = makeElement('main');
+  const textMain = makeElement('main');
+  const dossierMain = makeElement('main');
+  const dossierStatus = makeElement('div');
   const dataNode = { textContent: '"exp_default"', innerText: '"exp_default"' };
+  const templateNode = { content: { childNodes: [] } };
+  const documentElement = { scrollHeight: 0 };
+  const body = { scrollHeight: 0 };
   const document = {
+    documentElement,
+    body,
     getElementById(id: string) {
       if (id === 'dokuha-exp') return dataNode;
       if (id === 'dokuha-exp-app') return app;
+      if (id === 'dokuha-text-main') return textMain;
+      if (id === 'dokuha-dossier-main') return dossierMain;
+      if (id === 'dokuha-dossier-status') return dossierStatus;
+      if (id === 'dokuha-content-source') return templateNode;
+      if (id === 'dokuha-status-source') return templateNode;
       return null;
     },
     createElement(tagName: string) {
       return makeElement(tagName);
+    },
+    createTextNode(text: string) {
+      return { nodeType: 3, nodeValue: text, textContent: text };
+    },
+    createDocumentFragment() {
+      return makeElement('fragment');
     }
   };
   const window: Record<string, unknown> = {
@@ -175,6 +200,10 @@ function makeBrowserSandbox(): Record<string, unknown> & { window: Record<string
     window,
     document,
     Image: FakeImage,
+    Node: {
+      ELEMENT_NODE: 1,
+      TEXT_NODE: 3
+    },
     URLSearchParams,
     setTimeout() {
       return 0;
@@ -190,13 +219,23 @@ function makeElement(tagName: string): Record<string, unknown> {
     title: '',
     style: {},
     dataset: {},
+    nodeType: 1,
+    textContent: '',
     children: [],
+    childNodes: [],
+    classList: {
+      contains() {
+        return false;
+      }
+    },
     setAttribute() {},
     append(...children: unknown[]) {
       (this.children as unknown[]).push(...children);
+      (this.childNodes as unknown[]).push(...children);
     },
     replaceChildren(...children: unknown[]) {
       this.children = children;
+      this.childNodes = children;
     },
     getContext() {
       return {

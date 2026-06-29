@@ -317,6 +317,12 @@
       const STACKABLE_ACCESSORY_NAMES = ['headphones'];
       const ACCESSORY_NAMES = MASK_ACCESSORY_NAMES.concat(STACKABLE_ACCESSORY_NAMES);
       const CACHE_KEY = '__DOKUHA_EXP_IMAGE_CACHE__';
+      const FALLBACK_CONFIG = {"defaults":{"face":"face_default","mouth":"mouth_neutral","eye":"eye_normal","brow":"brow_down"},"priorities":{"explicitComponent":90,"visualKeyword":50,"secondaryKeyword":40},"thresholds":{"presetMinConfidence":0.88,"syntheticMinTokenMatchRatio":0.5,"shortTokenMaxDistance":1,"longTokenMaxDistance":2,"longTokenMinLength":6},"stopTokens":["exp","expression","dokuha","dokuhasaka","kosaka"],"keywordRules":[{"alias":"jitome","effects":[{"slot":"eye","value":"eye_jitome_1","priority":50}]},{"alias":"deadpan","effects":[{"slot":"eye","value":"eye_jitome_1","priority":50}]},{"alias":"glare","effects":[{"slot":"eye","value":"eye_jitome_2","priority":50}]},{"alias":"pout","effects":[{"slot":"mouth","value":"mouth_pout","priority":50},{"slot":"brow","value":"brow_up","priority":40}]},{"alias":"smile","effects":[{"slot":"mouth","value":"mouth_smile","priority":50}]},{"alias":"smirk","effects":[{"slot":"mouth","value":"mouth_smirk","priority":50}]},{"alias":"huh","effects":[{"slot":"mouth","value":"mouth_huh_1","priority":50}]},{"alias":"yawn","effects":[{"slot":"mouth","value":"mouth_huh_2","priority":50}]},{"alias":"awawa","effects":[{"slot":"mouth","value":"mouth_awawa","priority":50}]},{"alias":"drool","effects":[{"slot":"mouth","value":"mouth_drool","priority":50}]},{"alias":"open","effects":[{"slot":"mouth","value":"mouth_open","priority":50}]},{"alias":"gritting","effects":[{"slot":"mouth","value":"mouth_gritting_teeth","priority":50}]},{"alias":"teeth","effects":[{"slot":"mouth","value":"mouth_gritting_teeth","priority":50}]},{"alias":"blank","effects":[{"slot":"mouth","value":"mouth_blank_1","priority":50}]},{"alias":"tongue","effects":[{"slot":"mouth","value":"mouth_tongue","priority":50}]},{"alias":"neutral","effects":[{"slot":"mouth","value":"mouth_neutral","priority":40}]},{"alias":"down","effects":[{"slot":"brow","value":"brow_down","priority":50}]},{"alias":"up","effects":[{"slot":"brow","value":"brow_up","priority":50}]},{"alias":"normal","effects":[{"slot":"brow","value":"brow_normal","priority":40}]},{"alias":"closed","effects":[{"slot":"eye","value":"eye_closed","priority":50}]},{"alias":"line","effects":[{"slot":"eye","value":"eye_line","priority":50}]},{"alias":"star","effects":[{"slot":"eye","value":"eye_star","priority":50}]},{"alias":"circle","effects":[{"slot":"eye","value":"eye_circle","priority":50}]},{"alias":"xd","effects":[{"slot":"eye","value":"eye_xd","priority":50}]},{"alias":"wide","effects":[{"slot":"eye","value":"eye_wide_1","priority":50}]},{"alias":"cry","effects":[{"slot":"eye","value":"eye_cry","priority":50}]},{"alias":"dizzy","effects":[{"slot":"eye","value":"eye_dizzy","priority":50}]},{"alias":"half","effects":[{"slot":"eye","value":"eye_half_1","priority":40}]},{"alias":"drowsy","effects":[{"slot":"eye","value":"eye_half_2","priority":50}]},{"alias":"sleep","effects":[{"slot":"eye","value":"eye_line","priority":50}]},{"alias":"sleepy","effects":[{"slot":"eye","value":"eye_half_2","priority":50}]},{"alias":"socket","effects":[{"slot":"eye","value":"eye_socket","priority":50}]},{"alias":"default","effects":[{"slot":"face","value":"face_default","priority":40}]},{"alias":"shadow","effects":[{"slot":"face","value":"face_shadow","priority":50}]},{"alias":"pale","effects":[{"slot":"face","value":"face_pale","priority":50}]},{"alias":"blush","effects":[{"slot":"face","value":"face_blush","priority":50}]},{"alias":"sweat","effects":[{"slot":"other","value":"sweat","priority":50}]},{"alias":"tear","effects":[{"slot":"other","value":"eye_tears_1","priority":50}]},{"alias":"tears","effects":[{"slot":"other","value":"eye_tears_1","priority":50}]},{"alias":"sad","effects":[{"slot":"mouth","value":"mouth_down_2","priority":50},{"slot":"brow","value":"brow_down","priority":50}]},{"alias":"surprised","effects":[{"slot":"eye","value":"eye_wide_1","priority":50},{"slot":"mouth","value":"mouth_huh_1","priority":50}]},{"alias":"panic","effects":[{"slot":"mouth","value":"mouth_awawa","priority":50},{"slot":"eye","value":"eye_wide_1","priority":50},{"slot":"brow","value":"brow_down","priority":50}]},{"alias":"embarrassed","effects":[{"slot":"face","value":"face_blush","priority":50},{"slot":"mouth","value":"mouth_awawa","priority":50},{"slot":"other","value":"sweat","priority":50}]}]};
+      const FALLBACK_DEFAULTS = FALLBACK_CONFIG.defaults;
+      const FALLBACK_PRIORITIES = FALLBACK_CONFIG.priorities;
+      const FALLBACK_THRESHOLDS = FALLBACK_CONFIG.thresholds;
+      const FALLBACK_STOP_TOKENS = new Set(FALLBACK_CONFIG.stopTokens);
+      const KEYWORD_RULES = FALLBACK_CONFIG.keywordRules;
       const main = document.getElementById('dokuha-dossier-main');
       const status = document.getElementById('dokuha-dossier-status');
       const contentSource = document.getElementById('dokuha-content-source');
@@ -350,11 +356,49 @@
         }
       }
 
+      function resolveExpression(value) {
+        const requested = readExpressionName(value);
+        if (!requested) return defaultExpression();
+
+        const exact = findExactExpression(requested);
+        if (exact) return exact;
+
+        const canonical = canonicalizeExpressionName(requested);
+        const normalized = EXP_DATA.expressions.find(function (item) {
+          return canonicalizeExpressionName(item.name) === canonical;
+        });
+        if (normalized) return normalized;
+
+        const typo = findTypoExpression(canonical);
+        if (typo) return typo;
+
+        const synthetic = buildSyntheticExpression(requested, canonical);
+        return synthetic || defaultExpression();
+      }
+
+      function readExpressionName(value) {
+        if (value && typeof value === 'object' && typeof value.name === 'string') return normalizeExpressionText(value.name);
+        if (typeof value !== 'string' && typeof value !== 'number') return '';
+        return normalizeExpressionText(String(value));
+      }
+
       function normalizeExpressionText(value) {
-        return String(value || '')
+        let text = String(value || '').trim();
+        try {
+          const parsed = JSON.parse(text);
+          if (typeof parsed === 'string' || typeof parsed === 'number') text = String(parsed).trim();
+        } catch (_) {}
+        return extractExpressionTag(text)
           .replace(/<\/?dokuha-exp>/gi, '')
-          .replace(/^[\"'`]+|[\"'`]+$/g, '')
+          .replace(/^[\"'\`]+|[\"'\`]+$/g, '')
           .trim();
+      }
+
+      function extractExpressionTag(value) {
+        const text = String(value || '');
+        const dokuhaMatch = text.match(/<dokuha-exp>\s*([\s\S]*?)\s*<\/dokuha-exp>/i);
+        if (dokuhaMatch) return dokuhaMatch[1] || '';
+        return text;
       }
 
       function canonicalizeExpressionName(value) {
@@ -366,28 +410,225 @@
           .replace(/^(exp_)+/, '');
       }
 
-      function resolveExpression(value) {
-        const requested = normalizeExpressionText(value) || DEFAULT_EXPRESSION;
+      function canonicalizeAssetName(value) {
+        return String(value || '')
+          .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '_')
+          .replace(/^_+|_+$/g, '');
+      }
+
+      function findExactExpression(requested) {
         const byId = Number(requested);
         if (Number.isFinite(byId)) {
           return EXP_DATA.expressions.find(function (item) {
             return item.id === Math.round(byId);
-          }) || defaultExpression();
+          }) || null;
         }
-        const exact = EXP_DATA.expressions.find(function (item) {
-          return item.name === requested;
-        });
-        if (exact) return exact;
-        const canonical = canonicalizeExpressionName(requested);
         return EXP_DATA.expressions.find(function (item) {
-          return canonicalizeExpressionName(item.name) === canonical;
-        }) || defaultExpression();
+          return item.name === requested;
+        }) || null;
+      }
+
+      function findTypoExpression(canonical) {
+        if (canonical.length < 5) return null;
+        const ranked = EXP_DATA.expressions
+          .map(function (item) {
+            return { expression: item, distance: damerauLevenshteinDistance(canonical, canonicalizeExpressionName(item.name)) };
+          })
+          .sort(function (a, b) {
+            return a.distance - b.distance;
+          });
+        const best = ranked[0];
+        const second = ranked[1];
+        if (!best) return null;
+        const target = canonicalizeExpressionName(best.expression.name);
+        const confidence = normalizedEditConfidence(canonical, target, best.distance);
+        const allowedDistance = best.distance <= 1 || (canonical.length >= 8 && best.distance <= 2);
+        const allowedConfidence = confidence >= FALLBACK_THRESHOLDS.presetMinConfidence;
+        const uniqueBest = !second || second.distance > best.distance;
+        return allowedDistance && allowedConfidence && uniqueBest ? best.expression : null;
+      }
+
+      function buildSyntheticExpression(sourceName, canonical) {
+        const rawTokens = canonical.split('_').filter(Boolean);
+        const tokens = rawTokens.filter(function (token) {
+          return !FALLBACK_STOP_TOKENS.has(token);
+        });
+        if (!tokens.length) return null;
+
+        const rules = buildKeywordRules();
+        const slots = {
+          face: { value: FALLBACK_DEFAULTS.face, priority: 0, order: -1 },
+          mouth: { value: FALLBACK_DEFAULTS.mouth, priority: 0, order: -1 },
+          eye: { value: FALLBACK_DEFAULTS.eye, priority: 0, order: -1 },
+          brow: { value: FALLBACK_DEFAULTS.brow, priority: 0, order: -1 }
+        };
+        const listSlots = { other: [] };
+        const matchedTokens = [];
+        const matchedIndexes = new Set();
+        let meaningfulMatches = 0;
+        let order = 0;
+
+        for (let index = 0; index < tokens.length;) {
+          const match = findRuleMatch(tokens, index, rules);
+          if (!match) {
+            index += 1;
+            continue;
+          }
+          matchedTokens.push(match.alias);
+          for (let offset = 0; offset < match.length; offset += 1) matchedIndexes.add(index + offset);
+          match.effects.forEach(function (effect) {
+            applyKeywordEffect(effect, slots, listSlots, order);
+          });
+          if (hasVisualEffect(match.effects)) meaningfulMatches += match.length;
+          order += 1;
+          index += match.length;
+        }
+
+        if (!matchedTokens.length) return null;
+        if (!meaningfulMatches) return null;
+        if (meaningfulMatches / tokens.length < FALLBACK_THRESHOLDS.syntheticMinTokenMatchRatio) return null;
+        const expression = {
+          id: 0,
+          name: 'exp_' + canonical,
+          face: slots.face.value,
+          mouth: slots.mouth.value,
+          eye: slots.eye.value,
+          brow: slots.brow.value,
+          synthetic: true,
+          sourceName,
+          matchedTokens: unique(matchedTokens),
+          unmatchedTokens: unique(tokens.filter(function (_, index) {
+            return !matchedIndexes.has(index);
+          }))
+        };
+        if (listSlots.other.length) expression.other = listSlots.other;
+        return expression;
+      }
+
+      function buildKeywordRules() {
+        const rules = new Map();
+        addExplicitAssetRules(rules, 'face', 'face_', ASSET_REFS.face);
+        addExplicitAssetRules(rules, 'mouth', 'mouth_', ASSET_REFS.mouth);
+        addExplicitAssetRules(rules, 'eye', 'eye_', ASSET_REFS.eye);
+        addExplicitAssetRules(rules, 'brow', 'brow_', ASSET_REFS.brow);
+        addExplicitAssetRules(rules, 'other', '', ASSET_REFS.other);
+        KEYWORD_RULES.forEach(function (rule) {
+          addRuleIfAvailable(rules, rule.alias, rule.effects);
+        });
+        return rules;
+      }
+
+      function addExplicitAssetRules(rules, slot, prefix, names) {
+        names.forEach(function (name) {
+          const canonical = canonicalizeAssetName(name);
+          const stripped = prefix ? canonicalizeAssetName(name.replace(new RegExp('^' + prefix, 'i'), '')) : canonical;
+          const effect = { slot, value: name, priority: FALLBACK_PRIORITIES.explicitComponent };
+          addRule(rules, canonical, [effect]);
+          addRule(rules, stripped, [effect]);
+        });
+      }
+
+      function addRuleIfAvailable(rules, alias, effects) {
+        const available = effects.filter(function (effect) {
+          return ASSET_REFS[effect.slot] && ASSET_REFS[effect.slot].includes(effect.value);
+        });
+        if (available.length) addRule(rules, alias, available);
+      }
+
+      function addRule(rules, alias, effects) {
+        const canonical = canonicalizeAssetName(alias);
+        if (!canonical) return;
+        unique([canonical, canonical.replace(/_/g, '')]).forEach(function (item) {
+          rules.set(item, (rules.get(item) || []).concat(effects));
+        });
+      }
+
+      function findRuleMatch(tokens, index, rules) {
+        const maxLength = Math.min(4, tokens.length - index);
+        for (let length = maxLength; length >= 1; length -= 1) {
+          const alias = tokens.slice(index, index + length).join('_');
+          const effects = rules.get(alias);
+          if (effects) return { alias, effects, length, fuzzy: false };
+        }
+        const fuzzyAlias = findFuzzyRuleAlias(tokens[index], rules);
+        const fuzzyEffects = fuzzyAlias ? rules.get(fuzzyAlias) : null;
+        return fuzzyAlias && fuzzyEffects ? { alias: fuzzyAlias, effects: fuzzyEffects, length: 1, fuzzy: true } : null;
+      }
+
+      function findFuzzyRuleAlias(token, rules) {
+        if (token.length < 4) return null;
+        const ranked = Array.from(rules.keys())
+          .filter(function (alias) { return !alias.includes('_') && alias.length >= 4; })
+          .map(function (alias) { return { alias, distance: damerauLevenshteinDistance(token, alias) }; })
+          .sort(function (a, b) { return a.distance - b.distance; });
+        const best = ranked[0];
+        const second = ranked[1];
+        if (!best) return null;
+        const allowed = best.distance <= FALLBACK_THRESHOLDS.shortTokenMaxDistance ||
+          (token.length >= FALLBACK_THRESHOLDS.longTokenMinLength && best.distance <= FALLBACK_THRESHOLDS.longTokenMaxDistance);
+        const uniqueBest = !second || second.distance > best.distance;
+        return allowed && uniqueBest ? best.alias : null;
+      }
+
+      function applyKeywordEffect(effect, slots, listSlots, order) {
+        if (effect.slot === 'other') {
+          if (!listSlots.other.includes(effect.value)) listSlots.other.push(effect.value);
+          return;
+        }
+        const current = slots[effect.slot];
+        if (effect.priority > current.priority || (effect.priority === current.priority && order >= current.order)) {
+          slots[effect.slot] = { value: effect.value, priority: effect.priority, order };
+        }
       }
 
       function defaultExpression() {
         return EXP_DATA.expressions.find(function (item) {
           return item.name === DEFAULT_EXPRESSION;
         }) || EXP_DATA.expressions[0];
+      }
+
+      function normalizedEditConfidence(a, b, distance) {
+        const maxLength = Math.max(a.length, b.length);
+        return maxLength ? 1 - distance / maxLength : 1;
+      }
+
+      function hasVisualEffect(effects) {
+        return effects.some(function (effect) {
+          return effect.slot === 'face' ||
+            effect.slot === 'mouth' ||
+            effect.slot === 'eye' ||
+            effect.slot === 'brow' ||
+            effect.slot === 'other';
+        });
+      }
+
+      function damerauLevenshteinDistance(a, b) {
+        const previous = Array.from({ length: b.length + 1 }, function (_, index) { return index; });
+        const current = Array.from({ length: b.length + 1 }, function () { return 0; });
+        const transposed = Array.from({ length: b.length + 1 }, function () { return 0; });
+        for (let row = 1; row <= a.length; row += 1) {
+          current[0] = row;
+          for (let column = 1; column <= b.length; column += 1) {
+            const cost = a[row - 1] === b[column - 1] ? 0 : 1;
+            let distance = Math.min(current[column - 1] + 1, previous[column] + 1, previous[column - 1] + cost);
+            if (
+              row > 1 &&
+              column > 1 &&
+              a[row - 1] === b[column - 2] &&
+              a[row - 2] === b[column - 1]
+            ) {
+              distance = Math.min(distance, transposed[column - 2] + 1);
+            }
+            current[column] = distance;
+          }
+          for (let column = 0; column <= b.length; column += 1) {
+            transposed[column] = previous[column];
+            previous[column] = current[column];
+          }
+        }
+        return previous[b.length];
       }
 
       function resolveOutfit(value) {
