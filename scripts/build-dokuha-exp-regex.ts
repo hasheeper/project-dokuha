@@ -55,12 +55,12 @@ const outputConfigs: OutputConfig[] = [
 const dossierOutputConfigs: OutputConfig[] = [
   {
     file: path.join(rootDir, 'ST/regex/DOKUHA_DOSSIER.html'),
-    title: 'DOKUHA Trial Dossier',
+    title: 'DOKUHA Text Block',
     assetBaseUrl: 'https://hasheeper.github.io/project-dokuha/dokuha-assets/standing'
   },
   {
     file: path.join(rootDir, 'ST/regex/local/DOKUHA_DOSSIER.local.html'),
-    title: 'DOKUHA Trial Dossier Local',
+    title: 'DOKUHA Text Block Local',
     assetBaseUrl: 'http://127.0.0.1:4173/dokuha-assets/standing'
   }
 ];
@@ -389,14 +389,15 @@ function replaceRequired(source: string, pattern: RegExp, replacement: string, l
 }
 
 function readDossierTemplate(file: string): string {
+  const canonical = path.join(rootDir, 'ST/regex/local/DOKUHA_DOSSIER.local.html');
+  if (fs.existsSync(canonical)) return fs.readFileSync(canonical, 'utf8');
   if (fs.existsSync(file)) return fs.readFileSync(file, 'utf8');
-  const fallback = path.join(rootDir, 'ST/regex/local/DOKUHA_DOSSIER.local.html');
-  if (fs.existsSync(fallback)) return fs.readFileSync(fallback, 'utf8');
   throw new Error(`Missing DOKUHA dossier template: ${file}`);
 }
 
 function renderDossierHtml(output: OutputConfig): string {
   let html = readDossierTemplate(output.file);
+  html = replaceRequired(html, /<title>[\s\S]*?<\/title>/, `<title>${output.title}</title>`, 'title');
   html = replaceRequired(
     html,
     /const EXP_DATA = [\s\S]*?;\n      const ASSET_REFS = /,
