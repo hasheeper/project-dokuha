@@ -140,7 +140,7 @@
     const runtimeDefault = ROOT.DOKUHASchemaRuntime?.makeDefaultDokuhaSystemState;
     if (typeof runtimeDefault === 'function') return runtimeDefault();
     return {
-      current_time: { year: 2026, month: 6, day: 29, hour: 20, minute: 0, day_of_week: '周一' },
+      current_time: { year: 2024, month: 4, day: 1, hour: 20, minute: 0, day_of_week: '周一' },
       time_advance: null,
       time_set_to: null,
       event_start: { name: null, type: null }

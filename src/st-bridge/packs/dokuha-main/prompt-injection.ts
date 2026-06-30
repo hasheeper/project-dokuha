@@ -326,7 +326,7 @@ import { derivePhysiologyProfile as deriveSharedPhysiologyProfile } from '../../
       '周日': 'Sun',
       '周天': 'Sun'
     };
-    const year = Number(currentTime.year) || 2026;
+    const year = Number(currentTime.year) || 2024;
     const month = Number(currentTime.month) || 1;
     const day = Number(currentTime.day) || 1;
     const hour = Number(currentTime.hour) || 0;
@@ -588,12 +588,6 @@ ${tipSection}
     );
   }
 
-  function resolveRuleMode(event) {
-    if (event.phase === 'end') return 'event_end';
-    if (event.type !== 'none' && event.phase !== 'none') return 'event_ongoing';
-    return 'daily';
-  }
-
   function buildDokuhaPrompt(state, system = null) {
     const profile = deriveFamiliarityProfile(state);
     const coreStates = state?.coreStates && typeof state.coreStates === 'object' ? state.coreStates : {};
@@ -607,7 +601,6 @@ ${tipSection}
     const physiology = derivePhysiologyProfile(state, system);
     const currentEvent = normalizeCurrentEvent(state);
     const contextNotesBlock = buildContextNotesBlock(state);
-    const ruleMode = resolveRuleMode(currentEvent);
     const currentLocation = state?.current_location || 'ApartmentHallway';
     const modeLabelMap = {
       normal: 'normal mode',
@@ -641,8 +634,7 @@ ${tipSection}
     };
 const stateCard = `[CURRENT STATE CARD]
 Time & place: It is ${formatCurrentTime(system)}, and current location is ${currentLocation}.
-Event: ${currentEvent.type === 'none' ? 'none' : `${currentEvent.name || '(unnamed)'} / ${currentEvent.type} / ${currentEvent.phase}${currentEvent.start_time ? ` / started ${currentEvent.start_time}` : ''}`}.
-Runtime mode: ${ruleMode}.
+Event: ${currentEvent.type === 'none' ? 'none' : `${currentEvent.name || '(unnamed)'} / ${currentEvent.type} / ${currentEvent.phase}`}.
 Relational state: She is in ${modeLabelMap[mode] || mode}, is ${attachmentLabelMap[attachmentLevel] || attachmentLevel} to you, and your relationship is "${relationshipLabelMap[relationshipStage] || relationshipStage}".
 Mental state: ${getDisorderLabel(disorderActive)}; long-term mood is ${longEmotionLabelMap[longTermEmotion] || longTermEmotion}, and momentary attitude is ${dynamicEmotionLabelMap[dynamicEmotion] || dynamicEmotion}.
 Familiarity: ${profile.familiarityTier} (${profile.familiarityPoints} pts).
@@ -659,33 +651,6 @@ Accessories: ${(Array.isArray(state.accessories) ? state.accessories : []).join(
       getPhysiologyModule(physiology.phaseLabel)
     ].filter(Boolean);
     return `<dokuha_status>
-familiarityPoints: ${profile.familiarityPoints}/500
-familiarityTier: ${profile.familiarityTier}
-attachmentLevel: ${attachmentLevel}
-relationshipStage: ${relationshipStage}
-mode: ${mode}
-disorderActive: ${disorderActive.join(', ') || 'none'}
-longTermEmotion: ${longTermEmotion}
-dynamicEmotion: ${dynamicEmotion}
-outfit: ${state.outfit}
-accessories: ${(Array.isArray(state.accessories) ? state.accessories : []).join(', ') || 'none'}
-currentTime: ${formatCurrentTime(system)}
-currentLocation: ${currentLocation}
-currentEventType: ${currentEvent.type}
-currentEventName: ${currentEvent.name || 'none'}
-currentEventPhase: ${currentEvent.phase}
-currentEventStartTime: ${currentEvent.start_time || 'none'}
-recentEventSummaries: ${normalizeContextNotes(state).event_summaries.length}
-pendingNewEventHint: ${normalizeContextNotes(state).pending_new_event_hint ? 'true' : 'false'}
-physiologyCycleDay: ${physiology.cycleDay}
-physiologyPhase: ${physiology.phase}
-physiologyPhaseLabel: ${physiology.phaseLabel}
-pmddIntervalDays: ${physiology.intervalDays === 999 ? 'never' : physiology.intervalDays}
-pmddCooldownHours: ${physiology.cooldownHoursRemaining}
-pmddCanTrigger: ${physiology.canTrigger ? 'true' : 'false'}
-pmddJudgment: ${physiology.judgment}
-runtimeMode: ${ruleMode}
-
 ${stateCard}
 ${contextNotesBlock ? `\n\n${contextNotesBlock}` : ''}
 

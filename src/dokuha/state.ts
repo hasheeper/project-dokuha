@@ -240,7 +240,7 @@ export const DEFAULT_DOKUHA_STATE: DokuhaState = {
   },
   metadata: {
     last_pmdd_time: null,
-    pmdd_cycle_anchor: '2026-06-29T20:00:00',
+    pmdd_cycle_anchor: '2024-04-01T20:00:00',
     pmdd_followup_consumed: false
   },
   context_notes: {
@@ -252,9 +252,9 @@ export const DEFAULT_DOKUHA_STATE: DokuhaState = {
 
 export const DEFAULT_DOKUHA_SYSTEM_STATE: DokuhaSystemState = {
   current_time: {
-    year: 2026,
-    month: 6,
-    day: 29,
+    year: 2024,
+    month: 4,
+    day: 1,
     hour: 20,
     minute: 0,
     day_of_week: '周一'

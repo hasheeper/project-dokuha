@@ -40,7 +40,7 @@
     },
     metadata: {
       last_pmdd_time: null,
-      pmdd_cycle_anchor: "2026-06-29T20:00:00",
+      pmdd_cycle_anchor: "2024-04-01T20:00:00",
       pmdd_followup_consumed: false
     },
     context_notes: {
@@ -475,7 +475,7 @@
     const bridgeUrl = new URL(getCurrentScriptUrl());
     const bridgeRoot = new URL(".", bridgeUrl);
     const params = bridgeUrl.searchParams;
-    const buildCacheKey = "59511c781ae9";
+    const buildCacheKey = "5cf7376402e1";
     const cacheBust = params.get("v") || params.get("cache") || normalizeString(getGlobalValue("ST_BRIDGE_CACHE_BUST")) || buildCacheKey;
     const forceReload = params.get("force") === "1" || normalizeBooleanFlag(getGlobalValue("ST_BRIDGE_FORCE_RELOAD"));
     function resolveBridgeProfile() {

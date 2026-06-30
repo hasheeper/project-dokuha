@@ -3,7 +3,7 @@
 
 变量根路径：`stat_data`
 
-合法 JSONPatch 路径：
+可写 JSONPatch 路径：
 ```text
 /dokuha/familiarity/points
 /dokuha/coreStates/relationshipStage
@@ -14,10 +14,7 @@
 /dokuha/outfit
 /dokuha/accessories
 /dokuha/current_location
-/dokuha/current_event/type
-/dokuha/current_event/name
 /dokuha/current_event/phase
-/dokuha/current_event/start_time
 /dokuha/context_notes/pending_event_summary
 /system/time_advance
 /system/time_set_to
@@ -26,8 +23,7 @@
 ```
 
 字段说明：
-- `/dokuha/familiarity/points`: 熟悉度点数，范围 `0..500`。旧 ERA 熟悉度数值按 `*5` 存入这里。
-- `familiarity.tier`: 自动派生字段，由 points 生成；不要手动更新。
+- `/dokuha/familiarity/points`: 熟悉度点数，范围 `0..500`；固定使用 `delta`，`value` 写本轮增减量。
 - `/dokuha/coreStates/relationshipStage`: 当前关系阶段。
   - `neighbor`: 邻居。
   - `friend`: 朋友。
@@ -64,31 +60,22 @@
   - mask 状态三选一：`no_mask | mask_up | mask_down`
   - 可额外叠加：`headphones`
 - `/dokuha/current_location`: 当前地点，使用 PascalCase 英文地点名，例如 `ApartmentHallway`、`DokuhaRoom`。
-- `/dokuha/current_event/type`: 当前事件类型。
-  - `none`: 无事件。
+- `/dokuha/current_event/phase`: 当前事件结束时写为 `end`。
+- `/dokuha/context_notes/pending_event_summary`: 事件结束摘要；与 `/dokuha/current_event/phase = end` 同轮写入，写清事件结果、关系影响或后续记忆点。
+- `/system/time_advance`: 时间推进命令，字符串格式为 `30 min`、`2 hr`、`1 day`、`1 week`、`1 month`。
+- `/system/time_set_to`: 时间定位命令，字符串格式为 `23:00`、`D+1 09:00`、`Wed 21:15`、`2024-4-1 20:00`。
+- `/system/event_start/name`: 新事件开启命令的事件名，使用 PascalCase 英文。
+- `/system/event_start/type`: 新事件开启命令的事件类型。
   - `daily_event`: 日常事件。
   - `relationship_event`: 关系事件。
   - `dokuha_crisis_event`: 毒羽危机事件。
   - `pmdd_event`: PMDD 相关事件。
   - `bad_luck`: 倒霉事件。
-- `/dokuha/current_event/name`: 当前事件名，使用 PascalCase 英文；无事件时为空字符串。
-- `/dokuha/current_event/phase`: 当前事件阶段。
-  - `none`: 无事件。
-  - `ongoing`: 事件进行中。
-  - `end`: 事件结束标记。
-- `/dokuha/current_event/start_time`: 当前事件开始时间，由系统生成；通常不要手动写。
-- `/dokuha/context_notes/pending_event_summary`: 当前事件结束时的一句客观摘要。只在本轮同时将 `/dokuha/current_event/phase` 写为 `end` 时填写；写清事件结果、关系影响或后续记忆点。
-- `/system/time_advance`: 时间推进命令，字符串格式为 `30 min`、`2 hr`、`1 day`、`1 week`、`1 month`。
-- `/system/time_set_to`: 时间定位命令，字符串格式为 `23:00`、`D+1 09:00`、`Wed 21:15`、`2026-6-29 20:00`。
-- `/system/event_start/name`: 新事件开启命令的事件名，使用 PascalCase 英文。
-- `/system/event_start/type`: 新事件开启命令的事件类型，只能是 `daily_event | relationship_event | dokuha_crisis_event | pmdd_event | bad_luck`。
-- `system.current_time`: 当前时间对象，由系统根据 `time_advance` / `time_set_to` 自动结算；不要手动更新。
-- `system.event_start`: 临时命令对象，系统处理后会清空。
 
 事件启动说明：
 - 当 `/dokuha/current_event/type = none` 且本轮正文已经形成具体情境、请求、麻烦、冲突、照顾、邀约或危机时，使用 `/system/event_start/name` 与 `/system/event_start/type` 启动事件。
-- 事件启动时优先写 `/system/event_start/*`
-- 如果只是普通寒暄、短暂吐槽或没有可命名目标的自由对话，可以保持无事件。
+- 事件启动写入 `/system/event_start/name` 与 `/system/event_start/type`。
+- 普通寒暄、短暂吐槽或没有可命名目标的自由对话，不启动事件。
 
 JSONPatch 格式：
 - 数值增减使用 `delta`。

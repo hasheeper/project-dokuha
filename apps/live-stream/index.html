@@ -92,47 +92,167 @@
 
     /* ================= 顶部控制条 ================= */
     .top-nav-bar {
-      position: absolute; top: 0; left: 0; right: 0; height: 64px;
-      display: grid; grid-template-columns: auto minmax(94px, 1fr) auto; align-items: end; gap: 10px; padding: 0 18px 12px;
-      background: linear-gradient(to bottom, rgba(18, 14, 20, 0.9) 20%, transparent); z-index: 50;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      height: 48px;
+      padding: 0 22px;
+      background: rgba(18, 14, 20, 0.85);
+      border-bottom: 1px solid var(--border-color);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
     .nav-label {
-      display: flex; align-items: center; gap: 8px;
-      font-family: var(--font-mono); font-size: 10px; font-weight: 800; letter-spacing: 2px;
+      justify-self: start;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-white);
+      letter-spacing: 1.7px;
       white-space: nowrap;
     }
-    .nav-label .dot { width: 8px; height: 8px; background: var(--accent-pink); border-radius: 50%; box-shadow: 0 0 8px rgba(223, 69, 118, 0.5); }
+    .nav-label .live-cursor {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-pink);
+      box-shadow: 0 0 8px rgba(223, 69, 118, 0.42);
+    }
     .nav-label .secure { color: var(--accent-pink); }
     .nav-clock {
+      justify-self: center;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 2px;
+      gap: 4px;
       min-width: 0;
-      padding-bottom: 1px;
-      justify-self: center;
     }
     .nav-clock-label {
+      position: relative;
+      display: flex;
+      align-items: center;
       font-family: var(--font-mono);
       font-size: 7px;
       font-weight: 800;
-      letter-spacing: 1.6px;
-      color: var(--text-dim);
+      letter-spacing: 1.8px;
+      color: rgba(255, 255, 255, 0.3);
       text-transform: uppercase;
     }
+    .nav-clock-label::before,
+    .nav-clock-label::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 12px;
+      height: 1px;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .nav-clock-label::before { right: 100%; margin-right: 6px; }
+    .nav-clock-label::after { left: 100%; margin-left: 6px; }
     .nav-clock-value {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
       max-width: 126px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .clock-date,
+    .clock-day {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 500;
+      color: var(--text-gray);
+      letter-spacing: 0.8px;
+    }
+    .clock-time {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-white);
+      letter-spacing: 0.8px;
+    }
+    .clock-colon {
+      display: inline-block;
+      transform: translateY(-1px);
+      animation: lcd-blink 1s step-end infinite;
+    }
+    @keyframes lcd-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.15; }
+    }
+    .nav-actions { justify-self: end; }
+    .nav-actions .nav-label { display: none; }
+
+    .event-status-badge {
+      position: absolute;
+      top: 72px;
+      right: 0;
+      z-index: 48;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      height: 21px;
+      max-width: 132px;
+      padding: 0 9px 0 10px;
+      border: 1px solid var(--border-color);
+      border-right: 0;
+      border-radius: 4px 0 0 4px;
+      background: rgba(22, 17, 24, 0.95);
+      font-family: var(--font-mono);
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 1.25px;
+      text-transform: uppercase;
+      box-shadow: none;
+      pointer-events: none;
+    }
+    .event-status-badge[hidden] { display: none; }
+    .event-status-badge__indicator {
+      width: 6px;
+      height: 6px;
+      flex: 0 0 auto;
+      border-radius: 1px;
+    }
+    .event-status-badge__state {
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 900;
-      letter-spacing: 0.8px;
-      color: var(--text-white);
-      text-shadow: 0 0 10px rgba(223, 69, 118, 0.22);
     }
-    .nav-actions .nav-label { display: none; }
+    .event-status-badge[data-event-state="idle"] {
+      border-color: rgba(255, 255, 255, 0.06);
+      color: var(--text-gray);
+    }
+    .event-status-badge[data-event-state="idle"] .event-status-badge__indicator {
+      background-color: #4d4651;
+    }
+    .event-status-badge[data-event-state="ongoing"] {
+      border-color: rgba(223, 69, 118, 0.4);
+      background: rgba(35, 17, 24, 0.95);
+      color: var(--text-white);
+    }
+    .event-status-badge[data-event-state="ongoing"]::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background-color: var(--accent-pink);
+    }
+    .event-status-badge[data-event-state="ongoing"] .event-status-badge__indicator {
+      background-color: var(--accent-pink);
+    }
 
     /* ================= 核心流式内容 ================= */
     .content-flow {
@@ -201,25 +321,109 @@
       left: 0;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      z-index: 20;
+      gap: 8px;
+      z-index: 24;
     }
 
     .hud-ribbon {
-      display: grid; grid-template-columns: 24px 142px; align-items: center; gap: 8px;
-      background: var(--glass-bg); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      border: 1px solid var(--border-color); border-left: 3px solid var(--c); border-radius: 6px;
-      padding: 8px 12px 8px 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      width: 180px;
+      background: rgba(22, 17, 24, 0.95);
+      border: 1px solid var(--border-color);
+      border-left: 3px solid var(--c);
+      border-radius: 4px;
+      padding: 7px 8px 7px 7px;
     }
-    .hud-ribbon-icon { display: flex; justify-content: center; align-items: center; color: var(--c); }
-    .hud-ribbon-icon svg { width: 18px; height: 18px; filter: drop-shadow(0 0 4px rgba(255,255,255,0.1)); }
-    .hud-ribbon-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow: hidden; }
-    .hud-ribbon-top { display: grid; grid-template-columns: minmax(0, 1fr) 86px; align-items: flex-end; gap: 6px; width: 100%; overflow: hidden; }
-    .hud-ribbon-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 9px; font-weight: 800; color: var(--text-gray); letter-spacing: 1px; }
-    .hud-ribbon-val { justify-self: end; width: 86px; max-width: 86px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-family: var(--font-eng); font-size: 18px; font-weight: 700; color: var(--text-white); line-height: 1; }
-    .hud-ribbon-val.text-value { font-family: var(--font-eng); font-size: 18px; letter-spacing: 1px; text-transform: uppercase; }
-    .ribbon-track { width: 100%; height: 3px; background: rgba(0,0,0,0.6); border-radius: 2px; overflow: hidden; }
-    .ribbon-fill { height: 100%; background: var(--c); border-radius: 2px; }
+    .hud-ribbon-icon {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex: 0 0 auto;
+      padding: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.68);
+      color: var(--c);
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.42);
+    }
+    .hud-ribbon-icon svg {
+      width: 16px;
+      height: 14px;
+    }
+    .hud-ribbon-info {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+      flex-direction: column;
+      gap: 7px;
+      overflow: hidden;
+    }
+    .info-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      min-width: 0;
+      transform: translateY(0);
+    }
+    .label-box {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
+    .label-box::before {
+      content: "";
+      width: 3px;
+      height: 3px;
+      flex: 0 0 auto;
+      background-color: var(--c);
+    }
+    .info-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: var(--font-mono);
+      font-size: 7px;
+      font-weight: 800;
+      color: var(--text-gray);
+      letter-spacing: 1.5px;
+    }
+    .info-value {
+      min-width: 0;
+      max-width: 66px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: right;
+      font-family: var(--font-eng);
+      font-size: 9px;
+      font-weight: 500;
+      color: #b5acba;
+      letter-spacing: 0.7px;
+      line-height: 1.15;
+      text-transform: uppercase;
+    }
+    .grid-track {
+      display: flex;
+      gap: 3px;
+      width: 100%;
+      height: 5px;
+      padding: 0 1px;
+    }
+    .grid-cell {
+      flex: 1;
+      transform: skewX(-20deg);
+      border-radius: 1px;
+      background: var(--border-color);
+    }
+    .grid-cell.active {
+      background: var(--c);
+    }
 
     /* 右侧单向弥散玻璃板条形码 */
     .barcode-widget {
@@ -295,18 +499,69 @@
     .nav-actions { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
     .mode-toggle {
       appearance: none;
-      border: 1px solid rgba(223, 69, 118, 0.45);
-      border-radius: 999px;
-      background: rgba(22, 18, 25, 0.78);
-      color: var(--accent-pink);
-      padding: 5px 8px;
+      display: inline-flex;
+      align-items: stretch;
+      height: 21px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      border-radius: 2px;
+      background: rgba(18, 14, 20, 0.8);
+      cursor: pointer;
+      transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.12s ease;
+    }
+    .mode-toggle-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      padding: 0;
+      border-right: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.04);
       font-family: var(--font-mono);
       font-size: 8px;
       font-weight: 800;
+      color: var(--text-gray);
       letter-spacing: 1px;
-      cursor: pointer;
     }
-    .character-art.static-art { overflow: visible; }
+    .mode-toggle-value {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      padding: 0;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--accent-pink);
+      letter-spacing: 0.7px;
+    }
+    .mode-toggle-value::before {
+      content: "[";
+      margin-right: 4px;
+      color: rgba(223, 69, 118, 0.4);
+    }
+    .mode-toggle-value::after {
+      content: "]";
+      margin-left: 4px;
+      color: rgba(223, 69, 118, 0.4);
+    }
+    .mode-toggle:hover {
+      border-color: var(--accent-pink);
+      background: rgba(223, 69, 118, 0.05);
+    }
+    .mode-toggle:hover .mode-toggle-label {
+      border-right-color: rgba(223, 69, 118, 0.3);
+      color: #b5acba;
+    }
+    .mode-toggle:active {
+      transform: scale(0.97);
+    }
+    .character-art.static-art {
+      top: 2%;
+      width: 126%;
+      height: 98%;
+      overflow: visible;
+    }
     .character-art.static-art .standing-layer-stack {
       position: absolute;
       inset: 0;
@@ -337,10 +592,23 @@
     .icon-group svg:hover { color: var(--accent-pink); transform: translateY(-2px) scale(1.1); }
 
     @media (max-width: 390px) {
-      .top-nav-bar { padding-inline: 14px; grid-template-columns: auto minmax(82px, 1fr) auto; gap: 8px; }
-      .nav-label { font-size: 9px; letter-spacing: 1.3px; }
-      .nav-clock-value { max-width: 104px; font-size: 9px; letter-spacing: 0.4px; }
+      .top-nav-bar { padding-inline: 16px; }
+      .nav-label { font-size: 8px; letter-spacing: 1.1px; }
+      .nav-label .live-cursor { width: 6px; height: 6px; }
+      .nav-clock-label { font-size: 7px; letter-spacing: 1.4px; }
+      .nav-clock-label::before,
+      .nav-clock-label::after { width: 9px; }
+      .nav-clock-value { max-width: 96px; gap: 4px; }
+      .clock-date,
+      .clock-day { font-size: 8px; letter-spacing: 0.4px; }
+      .clock-time { font-size: 10px; letter-spacing: 0.4px; }
       .nav-actions { gap: 7px; }
+      .mode-toggle { height: 20px; }
+      .mode-toggle-label { width: 34px; font-size: 7px; letter-spacing: 0.8px; }
+      .mode-toggle-value { width: 58px; font-size: 8px; letter-spacing: 0.5px; }
+      .mode-toggle-value::before { margin-right: 3px; }
+      .mode-toggle-value::after { margin-left: 3px; }
+      .event-status-badge { max-width: 122px; padding: 0 8px 0 10px; font-size: 7px; letter-spacing: 1px; }
     }
 
   </style>
@@ -359,16 +627,27 @@
 
     <!-- 顶部状态栏 -->
     <nav class="top-nav-bar">
-      <div class="nav-label"><span class="dot"></span> LIVE STREAM</div>
+      <div class="nav-label"><span class="live-cursor"></span> LIVE STREAM</div>
       <div class="nav-clock" aria-label="Current story time">
         <span class="nav-clock-label">LOCAL TIME</span>
-        <span class="nav-clock-value" data-dokuha-field="current-time">06.29 20:00</span>
+        <div class="nav-clock-value">
+          <span class="clock-date" data-dokuha-field="current-time-date">04.01</span>
+          <span class="clock-time"><span data-dokuha-field="current-time-hour">20</span><span class="clock-colon">:</span><span data-dokuha-field="current-time-minute">00</span></span>
+          <span class="clock-day" data-dokuha-field="current-time-day">MON</span>
+        </div>
       </div>
       <div class="nav-actions">
-        <button class="mode-toggle" type="button" data-dokuha-action="toggle-standing-mode">MODE:<span data-dokuha-field="standing-mode">STATIC</span></button>
+        <button class="mode-toggle" type="button" data-dokuha-action="toggle-standing-mode">
+          <span class="mode-toggle-label">MODE</span>
+          <span class="mode-toggle-value" data-dokuha-field="standing-mode">STATIC</span>
+        </button>
         <div class="nav-label">SECURE <span class="secure">●</span></div>
       </div>
     </nav>
+    <div class="event-status-badge" data-dokuha-event-badge data-event-state="idle" title="No active event">
+      <span class="event-status-badge__indicator" aria-hidden="true"></span>
+      <span class="event-status-badge__state" data-dokuha-field="event-status">EVENT: IDLE</span>
+    </div>
 
     <!-- 核心流式骨架 (溢出可见) -->
     <section class="content-flow">
@@ -386,22 +665,62 @@
         <!-- 浮动小组件 -->
         <div class="hud-float-stack">
           <div class="hud-ribbon" style="--c: var(--accent-pink);">
-            <div class="hud-ribbon-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
+            <div class="hud-ribbon-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            </div>
             <div class="hud-ribbon-info">
-              <div class="hud-ribbon-top"><span class="hud-ribbon-label">MODE</span><span class="hud-ribbon-val text-value" data-dokuha-field="story-mode">NORMAL</span></div>
+              <div class="info-header">
+                <div class="label-box"><span class="info-label">MODE</span></div>
+                <span class="info-value text-value" data-dokuha-field="story-mode">NORMAL</span>
+              </div>
+              <div class="grid-track" data-dokuha-grid="story-mode">
+                <div class="grid-cell active"></div>
+                <div class="grid-cell active"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+              </div>
             </div>
           </div>
           <div class="hud-ribbon" style="--c: #9c8a9e;">
-            <div class="hud-ribbon-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></div>
+            <div class="hud-ribbon-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </div>
             <div class="hud-ribbon-info">
-              <div class="hud-ribbon-top"><span class="hud-ribbon-label">EMOTION</span><span class="hud-ribbon-val text-value" data-dokuha-field="dynamic-emotion">SLIGHTLY_COLD</span></div>
+              <div class="info-header">
+                <div class="label-box"><span class="info-label">EMOTION</span></div>
+                <span class="info-value text-value" data-dokuha-field="dynamic-emotion">SLIGHTLY COLD</span>
+              </div>
+              <div class="grid-track" data-dokuha-grid="dynamic-emotion">
+                <div class="grid-cell active"></div>
+                <div class="grid-cell active"></div>
+                <div class="grid-cell active"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+              </div>
             </div>
           </div>
           <div class="hud-ribbon" style="--c: #df4576;">
-            <div class="hud-ribbon-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.4-9.3-8.3C.8 9.5 2.1 5.3 5.7 4.5 7.8 4 10 5.1 12 7.4c2-2.3 4.2-3.4 6.3-2.9 3.6.8 4.9 5 3 8.2C19 16.6 12 21 12 21z"></path></svg></div>
+            <div class="hud-ribbon-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M164.47,195.63a8,8,0,0,1-6.7,12.37H10.23a8,8,0,0,1-6.7-12.37,95.83,95.83,0,0,1,47.22-37.71,60,60,0,1,1,66.5,0A95.83,95.83,0,0,1,164.47,195.63Zm87.91-.15a95.87,95.87,0,0,0-47.13-37.56A60,60,0,0,0,144.7,54.59a4,4,0,0,0-1.33,6A75.83,75.83,0,0,1,147,150.53a4,4,0,0,0,1.07,5.53,112.32,112.32,0,0,1,29.85,30.83,23.92,23.92,0,0,1,3.65,16.47,4,4,0,0,0,3.95,4.64h60.3a8,8,0,0,0,7.73-5.93A8.22,8.22,0,0,0,252.38,195.48Z"></path></svg>
+            </div>
             <div class="hud-ribbon-info">
-              <div class="hud-ribbon-top"><span class="hud-ribbon-label">FAMILIARITY</span><span class="hud-ribbon-val" data-dokuha-field="familiarity">0/500</span></div>
-              <div class="ribbon-track"><div class="ribbon-fill" data-dokuha-bar="familiarity" style="width: 0%;"></div></div>
+              <div class="info-header">
+                <div class="label-box"><span class="info-label">FAMILIARITY</span></div>
+                <span class="info-value" data-dokuha-field="familiarity">0/500</span>
+              </div>
+              <div class="grid-track" data-dokuha-grid="familiarity">
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -439,7 +758,7 @@
             <span class="name-last">狐坂</span>
             <span class="name-first">毒羽</span>
           </div>
-          <div class="sub-text" data-dokuha-field="profileLine">NEIGHBOR <span class="slash">/</span> LOW <span class="slash">/</span> NON_ATTACHED</div>
+          <div class="sub-text">LOSTRAB_722 <span class="slash">/</span> LOCAL HOST</div>
         </div>
 
         <div class="action-block">
@@ -880,13 +1199,14 @@
         familiarity: { points: 0, tier: "low" },
         coreStates: { mode: "normal", relationshipStage: "neighbor", attachmentLevel: "non_attached" },
         mentalStates: { disorderActive: [], longTermEmotion: "normal", dynamicEmotion: "slightly_cold" },
+        current_event: { type: "none", name: "", phase: "none", start_time: "" },
         outfit: INITIAL_PARAMS.get("outfit") || "streetwear_full",
         expression: INITIAL_PARAMS.get("expression") || INITIAL_PARAMS.get("exp") || "exp_default",
         accessories: readAccessories(INITIAL_PARAMS),
         standingMode: window.DOKUHA_STANDING_MODE || "static"
       };
       const DEFAULT_SYSTEM = {
-        current_time: { year: 2026, month: 6, day: 29, hour: 20, minute: 0, day_of_week: "周一" }
+        current_time: { year: 2024, month: 4, day: 1, hour: 20, minute: 0, day_of_week: "周一" }
       };
       const LABELS = {
         mode: { normal: "NORMAL", tired_mode: "TIRED", hell_mode: "HELL" },
@@ -894,10 +1214,12 @@
         attachmentLevel: { non_attached: "NON_ATTACHED", light_attached: "LIGHT_ATTACHED", heavy_attached: "HEAVY_ATTACHED" },
         relationshipStage: { neighbor: "NEIGHBOR", friend: "FRIEND", lover: "LOVER" },
         longTermEmotion: { depressed: "DEPRESSED", exhausted: "EXHAUSTED", normal: "NORMAL", comfortable: "COMFORTABLE", irritated: "IRRITATED", paralyzed: "PARALYZED" },
-        dynamicEmotion: { normal: "NORMAL", warm: "WARM", passionate: "PASSIONATE", slightly_cold: "SLIGHTLY_COLD", freezing_cold: "FREEZING_COLD" }
+        dynamicEmotion: { normal: "NORMAL", warm: "WARM", passionate: "HOT", slightly_cold: "COLD", freezing_cold: "COLD" }
       };
       const FAMILIARITY_MAX = 500;
       const FAMILIARITY_TIER_THRESHOLDS = { mid: 100, high: 250 };
+      const MODE_GRID_LEVELS = { normal: 2, tired_mode: 3, hell_mode: 5 };
+      const EMOTION_GRID_LEVELS = { freezing_cold: 1, normal: 2, slightly_cold: 3, warm: 4, passionate: 5 };
       const STATIC_BASE = new URL("../../dokuha-assets/standing/", location.href).href;
       const OUTFIT_NAMES = ["streetwear_full", "streetwear_inner", "nightwear", "underwear", "nude"];
       const STANDING_MODES = ["spine", "static"];
@@ -937,6 +1259,10 @@
         };
       }
       function formatCurrentTime(system) {
+        const parts = formatCurrentTimeParts(system);
+        return `${parts.date} ${parts.hour}:${parts.minute}${parts.day ? " " + parts.day : ""}`;
+      }
+      function formatCurrentTimeParts(system) {
         const time = normalizeSystem(system).current_time;
         const month = pad2(time.month);
         const day = pad2(time.day);
@@ -953,7 +1279,15 @@
           "周天": "SUN"
         };
         const dow = dayOfWeekMap[time.day_of_week] || String(time.day_of_week || "").toUpperCase();
-        return `${month}.${day} ${hour}:${minute}${dow ? " " + dow : ""}`;
+        return { date: `${month}.${day}`, hour, minute, day: dow };
+      }
+      function updateClock(system) {
+        const parts = formatCurrentTimeParts(system);
+        setText("current-time-date", parts.date);
+        setText("current-time-hour", parts.hour);
+        setText("current-time-minute", parts.minute);
+        setText("current-time-day", parts.day);
+        setText("current-time", formatCurrentTime(system));
       }
       function normalizeStandingMode(value) {
         return STANDING_MODES.includes(value) ? value : DEFAULT_STATE.standingMode;
@@ -977,10 +1311,10 @@
         node.title = node.textContent || "";
         node.style.fontSize = "";
         node.style.letterSpacing = "";
-        const sizes = [18, 17, 16, 15, 14, 13, 12, 11];
+        const sizes = [9, 8, 7];
         for (const size of sizes) {
           node.style.fontSize = size + "px";
-          node.style.letterSpacing = size > 14 ? "1px" : size > 12 ? "0.4px" : "0";
+          node.style.letterSpacing = size > 8 ? "0.7px" : "0.3px";
           if (node.scrollWidth <= node.clientWidth + 1) break;
         }
       }
@@ -988,7 +1322,7 @@
         if (fitHudValueRaf) cancelAnimationFrame(fitHudValueRaf);
         fitHudValueRaf = requestAnimationFrame(() => {
           fitHudValueRaf = 0;
-          document.querySelectorAll(".hud-ribbon-val.text-value").forEach(fitHudValueNode);
+          document.querySelectorAll(".info-value.text-value").forEach(fitHudValueNode);
         });
       }
       function setText(name, value) {
@@ -996,17 +1330,66 @@
         fitHudTextValues();
       }
       function setBar(name, percent) {
+        const clamped = Math.max(0, Math.min(100, percent));
         document.querySelectorAll('[data-dokuha-bar="' + name + '"]').forEach((node) => {
-          node.style.width = Math.max(0, Math.min(100, percent)) + "%";
+          node.style.width = clamped + "%";
         });
+        document.querySelectorAll('[data-dokuha-grid="' + name + '"]').forEach((track) => {
+          const cells = Array.from(track.querySelectorAll(".grid-cell"));
+          const rawCount = Math.ceil((clamped / 100) * cells.length);
+          const activeCount = clamped > 0 ? Math.max(1, rawCount) : 0;
+          cells.forEach((cell, index) => {
+            cell.classList.toggle("active", index < activeCount);
+          });
+        });
+      }
+      function setGridLevel(name, level) {
+        document.querySelectorAll('[data-dokuha-grid="' + name + '"]').forEach((track) => {
+          const cells = Array.from(track.querySelectorAll(".grid-cell"));
+          const activeCount = Math.max(0, Math.min(cells.length, Math.round(level)));
+          cells.forEach((cell, index) => {
+            cell.classList.toggle("active", index < activeCount);
+          });
+        });
+      }
+      function normalizeCurrentEvent(state) {
+        const source = state && typeof state === "object" ? state : {};
+        const event = source.current_event && typeof source.current_event === "object"
+          ? source.current_event
+          : source.currentEvent && typeof source.currentEvent === "object"
+            ? source.currentEvent
+            : {};
+        return {
+          type: normalizeString(event.type, "none"),
+          name: normalizeString(event.name, ""),
+          phase: normalizeString(event.phase, "none")
+        };
+      }
+      function updateEventBadge(state) {
+        const event = normalizeCurrentEvent(state);
+        const isOngoing = event.type !== "none" && event.phase !== "none" && event.phase !== "end";
+        document.querySelectorAll("[data-dokuha-event-badge]").forEach((node) => {
+          node.hidden = false;
+          node.setAttribute("data-event-state", isOngoing ? "ongoing" : "idle");
+          node.title = isOngoing
+            ? "Event ongoing" + (event.name ? ": " + event.name : "")
+            : "No active event";
+        });
+        setText("event-status", isOngoing ? "EVENT: ONGOING" : "EVENT: IDLE");
       }
       function applyState(state, profile) {
         const nextState = state && typeof state === "object" ? state : {};
+        const nextEvent = nextState.current_event && typeof nextState.current_event === "object"
+          ? nextState.current_event
+          : nextState.currentEvent && typeof nextState.currentEvent === "object"
+            ? nextState.currentEvent
+            : {};
         currentState = {
           ...currentState,
           ...nextState,
           coreStates: { ...currentState.coreStates, ...(nextState.coreStates && typeof nextState.coreStates === "object" ? nextState.coreStates : {}) },
-          mentalStates: { ...currentState.mentalStates, ...(nextState.mentalStates && typeof nextState.mentalStates === "object" ? nextState.mentalStates : {}) }
+          mentalStates: { ...currentState.mentalStates, ...(nextState.mentalStates && typeof nextState.mentalStates === "object" ? nextState.mentalStates : {}) },
+          current_event: { ...currentState.current_event, ...nextEvent }
         };
         const nextProfile = profile && typeof profile === "object" ? profile : deriveFamiliarityProfile(currentState);
         const familiarityPoints = clampNumber(nextProfile.familiarityPoints, 0, FAMILIARITY_MAX, DEFAULT_STATE.familiarity.points);
@@ -1024,16 +1407,18 @@
         setText("story-mode", mode);
         setText("dynamic-emotion", dynamicEmotion);
         setText("familiarity", String(familiarityPoints) + "/" + FAMILIARITY_MAX);
+        setGridLevel("story-mode", MODE_GRID_LEVELS[currentState.coreStates.mode] || MODE_GRID_LEVELS.normal);
+        setGridLevel("dynamic-emotion", EMOTION_GRID_LEVELS[currentState.mentalStates.dynamicEmotion] || EMOTION_GRID_LEVELS.normal);
         setBar("familiarity", familiarityPercent);
         setText("familiarity-profile", profileText);
         setText("identity", outfit + " / " + accessoryText);
-        setText("profileLine", relationship + " / " + tier + " / " + attachment);
         setText("standing-mode", getStandingMode().toUpperCase());
-        setText("current-time", formatCurrentTime(currentSystem));
+        updateClock(currentSystem);
+        updateEventBadge(currentState);
       }
       function applySystem(system) {
         currentSystem = normalizeSystem(system);
-        setText("current-time", formatCurrentTime(currentSystem));
+        updateClock(currentSystem);
       }
       function getStandingMode() {
         return normalizeStandingMode(window.DOKUHA_STANDING_MODE);

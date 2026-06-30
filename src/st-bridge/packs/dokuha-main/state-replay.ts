@@ -347,6 +347,39 @@ import {
     return buildReplayPatch('replace', path, afterValue);
   }
 
+  function buildEventSummaryPatches(beforeValue, afterValue) {
+    if (!Array.isArray(beforeValue) || !Array.isArray(afterValue)) {
+      return [buildDokuhaFieldPatch('/dokuha/context_notes/event_summaries', beforeValue, afterValue)];
+    }
+    if (areJsonValuesEqual(beforeValue, afterValue)) return [];
+
+    const appended = afterValue[afterValue.length - 1];
+    const beforePlusOne = afterValue.length === beforeValue.length + 1
+      && areJsonValuesEqual(beforeValue, afterValue.slice(0, beforeValue.length));
+    if (beforePlusOne) {
+      return [buildReplayPatch('add', '/dokuha/context_notes/event_summaries/-', appended)];
+    }
+
+    const rolledWindow = beforeValue.length === DOKUHA_EVENT_SUMMARY_LIMIT
+      && afterValue.length === DOKUHA_EVENT_SUMMARY_LIMIT
+      && areJsonValuesEqual(beforeValue.slice(1), afterValue.slice(0, -1));
+    if (rolledWindow) {
+      return [
+        buildReplayPatch('remove', '/dokuha/context_notes/event_summaries/0', undefined),
+        buildReplayPatch('add', '/dokuha/context_notes/event_summaries/-', appended)
+      ];
+    }
+
+    return [buildReplayPatch('replace', '/dokuha/context_notes/event_summaries', afterValue)];
+  }
+
+  function buildDokuhaFieldPatches(path, beforeValue, afterValue) {
+    if (path === '/dokuha/context_notes/event_summaries') {
+      return buildEventSummaryPatches(beforeValue, afterValue);
+    }
+    return [buildDokuhaFieldPatch(path, beforeValue, afterValue)];
+  }
+
   function buildDokuhaStatePatches(beforeStatData, afterStatData) {
     const beforeDokuha = isObject(beforeStatData?.[DOKUHA_KEY]) ? beforeStatData[DOKUHA_KEY] : null;
     const hasAfterDokuha = isObject(afterStatData?.[DOKUHA_KEY]);
@@ -375,7 +408,7 @@ import {
       const beforeValue = readJsonPointer(beforeStatData, path);
       const afterValue = readJsonPointer(normalizedAfterStatData, path);
       if (afterValue === undefined || areJsonValuesEqual(beforeValue, afterValue)) continue;
-      patches.push(buildDokuhaFieldPatch(path, beforeValue, afterValue));
+      patches.push(...buildDokuhaFieldPatches(path, beforeValue, afterValue));
     }
     return patches;
   }
@@ -894,7 +927,9 @@ import {
     (Array.isArray(patches) ? patches : []).forEach((patch) => {
       if (!patch || typeof patch !== 'object') return;
       const path = typeof patch.path === 'string' ? patch.path.trim() : '';
-      const allowed = path === '/dokuha' || ALLOWED_FIELD_PATHS.includes(path);
+      const allowed = path === '/dokuha'
+        || ALLOWED_FIELD_PATHS.includes(path)
+        || /^\/dokuha\/context_notes\/event_summaries\/(?:-|0|[1-9]\d*)$/.test(path);
       if (!allowed) return;
       byPath.set(path, { ...patch, path });
     });

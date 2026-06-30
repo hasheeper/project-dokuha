@@ -1,12 +1,11 @@
 <format_rule>
 【DOKUHA 台词与表情格式规则】
 
-1. 基础原则: 本规则负责正文中的台词与表情差分格式；变量更新由 `变量规则.txt` 负责。
+1. 基础原则: 本规则负责正文中的台词与表情差分格式。
 
 2. 正文外层结构
-- 整个正文使用一个完整的 `<content>...</content>` 包裹。
+- 整个正文使用一个完整的 `<content>...</content>` xml标签包裹。
 - 叙事文本、动作描写、环境描写、所有 `<dokuha-line>` 都放在 `<content>` 内。
-- `<UpdateVariable>` 或 Skipping 按 `变量规则.txt` 在 `<content>` 结束后处理。
 
 3. DOKUHA 台词差分规则
 - 类似 AVG/GALGAME 的台词-差分富文本模式，用于“毒羽当前消息里的即时情绪”。

@@ -14,6 +14,7 @@
     mid: 20 * DOKUHA_FAMILIARITY_SCALE,
     high: 50 * DOKUHA_FAMILIARITY_SCALE
   };
+  const DOKUHA_EVENT_SUMMARY_LIMIT = 6;
   const DOKUHA_PMDD_CYCLE_RULE = Object.freeze({
     cycleLengthDays: 32,
     follicularEndDay: 14,
@@ -43,14 +44,14 @@
       phase: "none"
     },
     metadata: {
-      pmdd_cycle_anchor: "2026-06-29T20:00:00"
+      pmdd_cycle_anchor: "2024-04-01T20:00:00"
     }
   };
   const DEFAULT_DOKUHA_SYSTEM_STATE = {
     current_time: {
-      year: 2026,
-      month: 6,
-      day: 29,
+      year: 2024,
+      month: 4,
+      day: 1,
       hour: 20,
       minute: 0,
       day_of_week: "周一"
@@ -160,7 +161,7 @@
   function normalizeContextNotes(value) {
     const source = isRecord(value) ? value : {};
     const rawSummaries = Array.isArray(source.event_summaries) ? source.event_summaries : Array.isArray(source.eventSummaries) ? source.eventSummaries : [];
-    const eventSummaries = rawSummaries.map((item) => normalizeEventSummary(item)).filter((item) => Boolean(item)).slice(-6);
+    const eventSummaries = rawSummaries.map((item) => normalizeEventSummary(item)).filter((item) => Boolean(item)).slice(-DOKUHA_EVENT_SUMMARY_LIMIT);
     return {
       event_summaries: eventSummaries,
       pending_event_summary: sanitizeContextNote(source.pending_event_summary ?? source.pendingEventSummary),
@@ -501,7 +502,7 @@
       const nextSummaries = [
         ...previousSummaries,
         makeEventSummaryEntry(state, system, event)
-      ].slice(-6);
+      ].slice(-DOKUHA_EVENT_SUMMARY_LIMIT);
       state.context_notes = {
         ...contextNotes,
         event_summaries: nextSummaries,
@@ -590,6 +591,31 @@
       }
       return buildReplayPatch("replace", path, afterValue);
     }
+    function buildEventSummaryPatches(beforeValue, afterValue) {
+      if (!Array.isArray(beforeValue) || !Array.isArray(afterValue)) {
+        return [buildDokuhaFieldPatch("/dokuha/context_notes/event_summaries", beforeValue, afterValue)];
+      }
+      if (areJsonValuesEqual(beforeValue, afterValue)) return [];
+      const appended = afterValue[afterValue.length - 1];
+      const beforePlusOne = afterValue.length === beforeValue.length + 1 && areJsonValuesEqual(beforeValue, afterValue.slice(0, beforeValue.length));
+      if (beforePlusOne) {
+        return [buildReplayPatch("add", "/dokuha/context_notes/event_summaries/-", appended)];
+      }
+      const rolledWindow = beforeValue.length === DOKUHA_EVENT_SUMMARY_LIMIT && afterValue.length === DOKUHA_EVENT_SUMMARY_LIMIT && areJsonValuesEqual(beforeValue.slice(1), afterValue.slice(0, -1));
+      if (rolledWindow) {
+        return [
+          buildReplayPatch("remove", "/dokuha/context_notes/event_summaries/0", void 0),
+          buildReplayPatch("add", "/dokuha/context_notes/event_summaries/-", appended)
+        ];
+      }
+      return [buildReplayPatch("replace", "/dokuha/context_notes/event_summaries", afterValue)];
+    }
+    function buildDokuhaFieldPatches(path, beforeValue, afterValue) {
+      if (path === "/dokuha/context_notes/event_summaries") {
+        return buildEventSummaryPatches(beforeValue, afterValue);
+      }
+      return [buildDokuhaFieldPatch(path, beforeValue, afterValue)];
+    }
     function buildDokuhaStatePatches(beforeStatData, afterStatData) {
       const beforeDokuha = isObject(beforeStatData?.[DOKUHA_KEY]) ? beforeStatData[DOKUHA_KEY] : null;
       const hasAfterDokuha = isObject(afterStatData?.[DOKUHA_KEY]);
@@ -616,7 +642,7 @@
         const beforeValue = readJsonPointer(beforeStatData, path);
         const afterValue = readJsonPointer(normalizedAfterStatData, path);
         if (afterValue === void 0 || areJsonValuesEqual(beforeValue, afterValue)) continue;
-        patches.push(buildDokuhaFieldPatch(path, beforeValue, afterValue));
+        patches.push(...buildDokuhaFieldPatches(path, beforeValue, afterValue));
       }
       return patches;
     }
@@ -1156,7 +1182,7 @@ ${block}` : block;
       (Array.isArray(patches) ? patches : []).forEach((patch) => {
         if (!patch || typeof patch !== "object") return;
         const path = typeof patch.path === "string" ? patch.path.trim() : "";
-        const allowed = path === "/dokuha" || ALLOWED_FIELD_PATHS.includes(path);
+        const allowed = path === "/dokuha" || ALLOWED_FIELD_PATHS.includes(path) || /^\/dokuha\/context_notes\/event_summaries\/(?:-|0|[1-9]\d*)$/.test(path);
         if (!allowed) return;
         byPath.set(path, { ...patch, path });
       });
